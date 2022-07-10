@@ -135,7 +135,7 @@ begin
 			else conv_std_logic_vector(208,9);
 
 	hbl_end <= conv_std_logic_vector(500,9) when border = '1' and ggres = '0'
-			else conv_std_logic_vector(008,9) when ((border xor ggres) = '0' or sms192 = '1')  and mask_column = '1' and cut_mask = '1'
+			else conv_std_logic_vector(008,9) when ((border xor ggres) = '0' or sms192 = '1') and mask_column = '1' and cut_mask = '1'
 			else conv_std_logic_vector(000,9) when (border xor ggres) = '0'
 			else conv_std_logic_vector(048,9);
 

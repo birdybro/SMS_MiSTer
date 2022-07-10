@@ -10,6 +10,7 @@ entity video is
 		pal:				in  std_logic;
 		border:        in  std_logic := '1';
 		ggres:        in  std_logic :='0';
+		sms192:			in	std_logic;
 		mask_column:	in  std_logic := '0';
 		cut_mask:		in	std_logic;
 		smode_M1:		in	 std_logic;
@@ -134,7 +135,7 @@ begin
 			else conv_std_logic_vector(208,9);
 
 	hbl_end <= conv_std_logic_vector(500,9) when border = '1' and ggres = '0'
-			else conv_std_logic_vector(008,9) when (border xor ggres) = '0' and mask_column = '1' and cut_mask = '1'
+			else conv_std_logic_vector(008,9) when ((border xor ggres) = '0' or sms192 = '1')  and mask_column = '1' and cut_mask = '1'
 			else conv_std_logic_vector(000,9) when (border xor ggres) = '0'
 			else conv_std_logic_vector(048,9);
 

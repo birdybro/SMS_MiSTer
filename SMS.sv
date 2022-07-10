@@ -905,7 +905,7 @@ assign AUDIO_R=audio_r;
 //	clk_sys,
 //	audio_l[15:4], audio_r[15:4],
 //	AUDIO_L,       AUDIO_R
-//); 
+//);
 
 wire [8:0] x;
 wire [8:0] y;
@@ -915,6 +915,7 @@ wire smode_M1, smode_M2, smode_M3;
 wire pal = status[2];
 wire border = status[13] & ~gg;
 wire ggres = ~status[39] & gg;
+wire sms192 = ~smode_M1 & ~smode_M3 & ~gg & ~status[13];
 wire turbo = status[40];
 
 video video
@@ -923,6 +924,7 @@ video video
 	.ce_pix(ce_pix),
 	.pal(pal),
 	.ggres(ggres),
+	.sms192(sms192),
 	.border(border),
 	.mask_column(mask_column),
 	.cut_mask(status[29]),

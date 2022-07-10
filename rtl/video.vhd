@@ -126,6 +126,7 @@ begin
 			
 	vbl_end <= conv_std_logic_vector(40,9)  when (smode_M1='1' and ggres='1')
 			else conv_std_logic_vector(000,9) when (smode_M1 = '1' or smode_M3 = '1' or ggres = '0') and border = '0'
+			else conv_std_logic_vector(000,9) when (smode_M1 = '1' or smode_M3 = '1') and border = '1'
 			else conv_std_logic_vector(488,9) when border = '1' and pal = '0'
 			else conv_std_logic_vector(458,9) when border = '1'
 			else conv_std_logic_vector(024,9);

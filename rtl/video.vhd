@@ -120,7 +120,7 @@ begin
 			else conv_std_logic_vector(224,9) when (smode_M1 = '1' and border = '0')
 			else conv_std_logic_vector(240,9) when (smode_M3 = '1' and border = '0')
 			else conv_std_logic_vector(216,9) when (border = '1' and pal = '0')
-			else conv_std_logic_vector(240,9) when (border = '1' and pal = '1')
+			else conv_std_logic_vector(240,9) when border = '1'
 			else conv_std_logic_vector(192,9) when ggres = '0'
 			else conv_std_logic_vector(168,9);
 			

@@ -200,13 +200,46 @@ always @(posedge CLK_VIDEO) begin
 end
 
 wire [1:0] ar = status[27:26];
+wire [7:0] arx, ary;
+
+always_comb begin
+	arx = 0;
+	ary = 0;
+	if (border) begin                // 282x240
+		arx = 47;
+		ary = 35;
+	end else if (status[29]) begin   // Cut left column
+		if (smode_M1) begin          // 248x224
+			arx = 62;
+			ary = 49;
+		end else if (smode_M3) begin // 248 x 240
+			arx = 124;
+			ary = 105;
+		end
+	end else begin
+		if (ggres) begin             // 160x144
+			arx = 80;
+			ary = 63;
+		end else if (smode_M1) begin // 256x224
+			arx = 64;
+			ary = 49;
+		end else if (smode_M3) begin // 256x240
+			arx = 128;
+			ary = 105;
+		end else begin               // 256x192
+			arx = 32;
+			ary = 21;
+		end
+	end
+end
+
 wire vga_de;
 video_freak video_freak
 (
 	.*,
 	.VGA_DE_IN(vga_de),
-	.ARX((!ar) ? (gg ? 12'd4 : (border ? 12'd47 : 12'd32)) : (ar - 1'd1)),
-	.ARY((!ar) ? (gg ? 12'd3 : (border ? 12'd35 : 12'd21)) : 12'd0),
+	.ARX((!ar) ? arx : (ar - 1'd1)),
+	.ARY((!ar) ? ary : 12'd0),
 	.CROP_SIZE(en216p && vcrop_en ? 10'd216 : 10'd0),
 	.CROP_OFF(voff),
 	.SCALE(status[31:30])

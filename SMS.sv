@@ -215,6 +215,9 @@ always_comb begin
 		end else if (smode_M3) begin // 248 x 240
 			arx = 124;
 			ary = 105;
+		end else begin               // 248 x 192 (not working for some reason??)
+			arx = 32; // temporarily 32 instead of 31 because cut + 256x192 does nothing
+			ary = 21;
 		end
 	end else begin
 		if (ggres) begin             // 160x144

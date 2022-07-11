@@ -205,17 +205,23 @@ wire [7:0] arx, ary;
 always_comb begin
 	arx = 0;
 	ary = 0;
-	if (border) begin                // 282x240
+	if (border & ~pal) begin         // 282x240
 		arx = 47;
 		ary = 35;
-	end else if (status[29]) begin   // Cut left column
-		if (smode_M1) begin          // 248x224
+	end else if (border & pal) begin // 282x294
+		arx = 376;
+		ary = 343;
+	end else if (status[29]) begin   // Cut left column off by 8 pixels
+		if (ggres) begin
+			arx = 76;
+			ary = 63;
+		end else if (smode_M1) begin // 248x224
 			arx = 62;
 			ary = 49;
-		end else if (smode_M3) begin // 248 x 240
+		end else if (smode_M3) begin // 248x240
 			arx = 124;
 			ary = 105;
-		end else begin               // 248 x 192
+		end else begin               // 248x192
 			arx = 31;
 			ary = 21;
 		end

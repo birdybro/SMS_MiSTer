@@ -261,7 +261,7 @@ parameter CONF_STR = {
 	"d2P1o7,Game Gear Res.,Standard,Extended;",
 	"P1-;",
 	"D2P1OC,SMS FM sound,Enable,Disable;",
-	"D2P1o41,Old VDP,Off,On;",
+	"P1o41,Old VDP,Off,On;",
 
 	"P2,Input;",
 	"P2-;",

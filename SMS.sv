@@ -205,14 +205,11 @@ wire [7:0] arx, ary;
 always_comb begin : aspectRatio
 	arx = 0;
 	ary = 0;
-	if (border & ~pal) begin         // 282x240
+	if (border) begin                // 282x240 and 282x293
 		arx = 47;
 		ary = 35;
-	end else if (border & pal) begin // 282x294
-		arx = 376;
-		ary = 343;
 	end else if (status[29]) begin   // Cut left column off by 8 pixels
-		if (ggres) begin
+		if (ggres) begin             // 152x144
 			arx = 76;
 			ary = 63;
 		end else if (smode_M1) begin // 248x224

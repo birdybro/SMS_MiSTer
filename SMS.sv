@@ -218,7 +218,7 @@ video_freak video_freak
 // 0         1         2         3          4         5         6   
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXX
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -261,6 +261,7 @@ parameter CONF_STR = {
 	"d2P1o7,Game Gear Res.,Standard,Extended;",
 	"P1-;",
 	"D2P1OC,SMS FM sound,Enable,Disable;",
+	"D2P1o41,Old VDP,Off,On;",
 
 	"P2,Input;",
 	"P2-;",
@@ -507,25 +508,25 @@ sdramclk_ddr
 reg  rom_wr = 0;
 wire sd_wrack;
 reg  [23:0] romwr_a;
-reg  ysj_quirk = 0;
+wire ysj_quirk = status[41];
 
-always @(posedge clk_sys) begin
-	reg [31:0] cart_id;
-	reg old_download;
-	old_download <= cart_download;
+// always @(posedge clk_sys) begin
+// 	reg [31:0] cart_id;
+// 	reg old_download;
+// 	old_download <= cart_download;
 
-	if(~old_download && cart_download) {ysj_quirk} <= 0;
+// 	if(~old_download && cart_download) {ysj_quirk} <= 0;
 
-	if(ioctl_wr & cart_download) begin
-		if(ioctl_addr == 'h7ffc) cart_id[31:24] <= ioctl_dout[7:0];
-		if(ioctl_addr == 'h7ffd) cart_id[23:16] <= ioctl_dout[7:0];
-		if(ioctl_addr == 'h7ffe) cart_id[15:08] <= ioctl_dout[7:0];
-		if(ioctl_addr == 'h7fff) cart_id[07:00] <= ioctl_dout[7:0];
-		if(ioctl_addr == 'h8000) begin
-			if(cart_id == 32'h13_70_01_4F) ysj_quirk <= 1; // Ys (Japan) Graphics Fix, forces VDP Version 1
-		end
-	end
-end
+// 	if(ioctl_wr & cart_download) begin
+// 		if(ioctl_addr == 'h7ffc) cart_id[31:24] <= ioctl_dout[7:0];
+// 		if(ioctl_addr == 'h7ffd) cart_id[23:16] <= ioctl_dout[7:0];
+// 		if(ioctl_addr == 'h7ffe) cart_id[15:08] <= ioctl_dout[7:0];
+// 		if(ioctl_addr == 'h7fff) cart_id[07:00] <= ioctl_dout[7:0];
+// 		if(ioctl_addr == 'h8000) begin
+// 			if(cart_id == 32'h13_70_01_4F) ysj_quirk <= 1; // Ys (Japan) Graphics Fix, forces VDP Version 1
+// 		end
+// 	end
+// end
 
 always @(posedge clk_sys) begin
 	reg old_download, old_reset;

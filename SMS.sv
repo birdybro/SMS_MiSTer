@@ -918,7 +918,7 @@ wire smode_M1, smode_M2, smode_M3;
 wire pal = status[2];
 wire border = status[13] & ~gg;
 wire ggres = ~status[39] & gg;
-wire sms192 = ~smode_M1 & ~smode_M3 & ~gg & ~status[13];
+wire sms192 = ~smode_M1 & ~smode_M3 & ~gg & ~status[13]; // SMS games in 256x192 res only
 wire turbo = status[40];
 
 video video

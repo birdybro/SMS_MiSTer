@@ -202,7 +202,7 @@ end
 wire [1:0] ar = status[27:26];
 wire [7:0] arx, ary;
 
-always_comb begin
+always_comb begin : aspectRatio
 	arx = 0;
 	ary = 0;
 	if (border & ~pal) begin         // 282x240
@@ -240,7 +240,7 @@ always_comb begin
 			ary = 21;
 		end
 	end
-end
+end : aspectRatio
 
 wire vga_de;
 video_freak video_freak

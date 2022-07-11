@@ -218,7 +218,7 @@ video_freak video_freak
 // 0         1         2         3          4         5         6   
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXX         XXXXX
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXXXXXXX   XXXXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -227,6 +227,31 @@ parameter CONF_STR = {
 	"H8FS1,SMSSG;",
 	"H8FS2,GG;",
 	"DIP;",
+	"-;",
+	// | vbl_st  | Bit 0 | Bit 1 | Bit 2 |
+	// | ------- | ----- | ----- | ----- |
+	// | 168     | 0     | 0     | 0     |
+	// | 184     | 0     | 0     | 1     |
+	// | 192     | 0     | 1     | 0     |
+	// | 216     | 0     | 1     | 1     |
+	// | 224     | 1     | 0     | 0     |
+	// | 240     | 1     | 0     | 1     |
+	// | 256     | 1     | 1     | 0     |
+	// | 272     | 1     | 1     | 1     |
+	//   Else 288
+	"o9B,vbl_st,168,184,192,216,224,240,256,272;", // status[43:41]
+	// | vbl_end  | Bit 0 | Bit 1 | Bit 2 |
+	// | -------- | ----- | ----- | ----- |
+	// | 000      | 0     | 0     | 0     |
+	// | 024      | 0     | 0     | 1     |
+	// | 040      | 0     | 1     | 0     |
+	// | 056      | 0     | 1     | 1     |
+	// | 458      | 1     | 0     | 0     |
+	// | 488      | 1     | 0     | 1     |
+	// | 500      | 1     | 1     | 0     |
+	// | 504      | 1     | 1     | 1     |
+	//   Else 508
+	"oCE,vbl_end,000,024,040,056,458,488,500,504;", // status[46:44]
 	"-;",
 	"C,Cheats;",
 	"H1OO,Cheats enabled,ON,OFF;",
@@ -881,6 +906,9 @@ wire border = status[13] & ~gg;
 wire ggres = ~status[39] & gg;
 wire turbo = status[40];
 
+wire [2:0] dbg_vbl_st  = status[43:41];
+wire [2:0] dbg_vbl_end = status[46:44];
+
 video video
 (
 	.clk(clk_sys),
@@ -892,6 +920,8 @@ video video
 	.cut_mask(status[29]),
 	.smode_M1(smode_M1),
 	.smode_M3(smode_M3),
+	.dbg_vbl_st(dbg_vbl_st),
+	.dbg_vbl_end(dbg_vbl_end),
 	.x(x),
 	.y(y),
 	.hsync(HS),

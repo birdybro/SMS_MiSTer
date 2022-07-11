@@ -5,22 +5,26 @@ use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity video is
 	Port (
-		clk:				in  std_logic;
-		ce_pix:			in  std_logic;
-		pal:				in  std_logic;
-		border:        in  std_logic := '1';
-		ggres:        in  std_logic :='0';
-		mask_column:	in  std_logic := '0';
-		cut_mask:		in	std_logic;
-		smode_M1:		in	 std_logic;
-		smode_M3:		in	 std_logic;
+		clk          :in  std_logic;
+		ce_pix       :in  std_logic;
+		pal          :in  std_logic;
+		border       :in  std_logic;
+		ggres        :in  std_logic;
+		mask_column  :in  std_logic;
+		cut_mask     :in  std_logic;
+		smode_M1     :in  std_logic;
+		smode_M3     :in  std_logic;
+
+		dbg_vbl_st   :in  std_logic_vector(2 downto 0);
+		dbg_vbl_end  :in  std_logic_vector(2 downto 0);
 		
-		x: 				out std_logic_vector(8 downto 0);
-		y:					out std_logic_vector(8 downto 0);
-		hsync:			out std_logic;
-		vsync:			out std_logic;
-		hblank:			out std_logic;
-		vblank:			out std_logic);
+		x            :out std_logic_vector(8 downto 0);
+		y            :out std_logic_vector(8 downto 0);
+		hsync        :out std_logic;
+		vsync        :out std_logic;
+		hblank       :out std_logic;
+		vblank       :out std_logic
+		);
 end video;
 
 architecture Behavioral of video is
@@ -115,25 +119,31 @@ begin
 	x	<= hcount;
 	y	<= vcount;
 
-	vbl_st  <= conv_std_logic_vector(184,9) when (smode_M1='1' and ggres='1')
-			else conv_std_logic_vector(224,9) when smode_M1 = '1'
-			else conv_std_logic_vector(240,9) when smode_M3 = '1'
-			else conv_std_logic_vector(216,9) when border = '1' and pal = '0'
-			else conv_std_logic_vector(240,9) when border = '1'
-			else conv_std_logic_vector(192,9) when ggres = '0'
-			else conv_std_logic_vector(168,9);
+	vbl_st    <= conv_std_logic_vector(168,9) when dbg_vbl_st = B"000"
+			else conv_std_logic_vector(184,9) when dbg_vbl_st = B"001"
+			else conv_std_logic_vector(192,9) when dbg_vbl_st = B"010"
+			else conv_std_logic_vector(216,9) when dbg_vbl_st = B"011"
+			else conv_std_logic_vector(224,9) when dbg_vbl_st = B"100"
+			else conv_std_logic_vector(240,9) when dbg_vbl_st = B"101"
+			else conv_std_logic_vector(256,9) when dbg_vbl_st = B"110"
+			else conv_std_logic_vector(272,9) when dbg_vbl_st = B"111"
+			else conv_std_logic_vector(288,9);
 			
-	vbl_end <= conv_std_logic_vector(40,9)  when (smode_M1='1' and ggres='1')
-			else conv_std_logic_vector(000,9) when smode_M1 = '1' or smode_M3 = '1' or (border = '0' and ggres = '0')
-			else conv_std_logic_vector(488,9) when border = '1' and pal = '0'
-			else conv_std_logic_vector(458,9) when border = '1'
-			else conv_std_logic_vector(024,9);
+	vbl_end   <= conv_std_logic_vector(000,9) when dbg_vbl_end = B"000"
+			else conv_std_logic_vector(024,9) when dbg_vbl_end = B"001"
+			else conv_std_logic_vector(040,9) when dbg_vbl_end = B"010"
+			else conv_std_logic_vector(056,9) when dbg_vbl_end = B"011"
+			else conv_std_logic_vector(458,9) when dbg_vbl_end = B"100"
+			else conv_std_logic_vector(488,9) when dbg_vbl_end = B"101"
+			else conv_std_logic_vector(500,9) when dbg_vbl_end = B"110"
+			else conv_std_logic_vector(504,9) when dbg_vbl_end = B"111"
+			else conv_std_logic_vector(508,9);
 
-	hbl_st  <= conv_std_logic_vector(270,9) when border = '1' and ggres = '0'
+	hbl_st    <= conv_std_logic_vector(270,9) when border = '1' and ggres = '0'
 			else conv_std_logic_vector(256,9) when (border xor ggres) = '0'
 			else conv_std_logic_vector(208,9);
 
-	hbl_end <= conv_std_logic_vector(500,9) when border = '1' and ggres = '0'
+	hbl_end   <= conv_std_logic_vector(500,9) when border = '1' and ggres = '0'
 			else conv_std_logic_vector(008,9) when (border xor ggres) = '0' and mask_column = '1' and cut_mask = '1'
 			else conv_std_logic_vector(000,9) when (border xor ggres) = '0'
 			else conv_std_logic_vector(048,9);

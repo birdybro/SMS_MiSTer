@@ -120,15 +120,14 @@ begin
 			else conv_std_logic_vector(224,9) when (smode_M1 = '1' and border = '0')
 			else conv_std_logic_vector(240,9) when (smode_M3 = '1' and border = '0')
 			else conv_std_logic_vector(216,9) when border = '1' and pal = '0'
-			else conv_std_logic_vector(240,9) when border = '1'
+			else conv_std_logic_vector(240,9) when border = '1' and pal = '1'
 			else conv_std_logic_vector(192,9) when ggres = '0'
 			else conv_std_logic_vector(168,9);
 			
 	vbl_end <= conv_std_logic_vector(40,9)  when (smode_M1='1' and ggres='1')
 			else conv_std_logic_vector(000,9) when (smode_M1 = '1' or smode_M3 = '1' or ggres = '0') and border = '0'
-			else conv_std_logic_vector(000,9) when (smode_M1 = '1' or smode_M3 = '1') and border = '1'
 			else conv_std_logic_vector(488,9) when border = '1' and pal = '0'
-			else conv_std_logic_vector(458,9) when border = '1'
+			else conv_std_logic_vector(458,9) when border = '1' and pal = '1'
 			else conv_std_logic_vector(024,9);
 
 	hbl_st  <= conv_std_logic_vector(270,9) when border = '1' and ggres = '0'

@@ -218,7 +218,7 @@ video_freak video_freak
 // 0         1         2         3          4         5         6   
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXX         XXXXX
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXX        XXXXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -248,11 +248,12 @@ parameter CONF_STR = {
 	"P1,Audio & Video;",
 	"P1-;",
 	"P1O2,TV System,NTSC,PAL;",
+	"h9P1o9,PAL Aspect,Corrected,Original;",
+	"P1-;",
 	"P1OQR,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"P1O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"d6P1oI,Vertical Crop,Disabled,216p(5x);",
 	"d6P1oJM,Crop Offset,0,2,4,8,10,12,-12,-10,-8,-6,-4,-2;",
-	"P1-;",
 	"P1OUV,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	"P1-;",
 	"D2P1OD,Border,No,Yes;",
@@ -410,7 +411,7 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(0)) hps_io
 	.buttons(buttons),
 	.ps2_key(ps2_key),
 	.status(status),
-	.status_menumask({systeme,~dbg_menu,en216p,status[13],~gun_en,~raw_serial,gg,~gg_avail,~bk_ena}),
+	.status_menumask({pal,systeme,~dbg_menu,en216p,status[13],~gun_en,~raw_serial,gg,~gg_avail,~bk_ena}),
 	.forced_scandoubler(forced_scandoubler),
 	.new_vmode(pal),
 	.gamma_bus(gamma_bus),
@@ -877,6 +878,7 @@ wire [11:0] color;
 wire mask_column;
 wire smode_M1, smode_M2, smode_M3;
 wire pal = status[2];
+wire pal_ar = status[41] & pal;
 wire border = status[13] & ~gg;
 wire ggres = ~status[39] & gg;
 wire turbo = status[40];
@@ -886,6 +888,7 @@ video video
 	.clk(clk_sys),
 	.ce_pix(ce_pix),
 	.pal(pal),
+	.pal_ar(pal_ar),
 	.ggres(ggres),
 	.border(border),
 	.mask_column(mask_column),

@@ -54,9 +54,9 @@ begin
 						elsif smode_M3='1' then
 							if vcount = 266 then
 								vcount <= conv_std_logic_vector(482,9);
-							elsif vcount = 482 then
+							elsif vcount = 478 then
 								vsync <= '1';
-							elsif vcount = 485 then
+							elsif vcount = 481 then
 								vsync <= '0';
 							end if;
 						else

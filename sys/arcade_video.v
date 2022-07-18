@@ -225,7 +225,7 @@ endfunction
 assign video_rotated = ~no_rotate;
 
 always @(posedge CLK_VIDEO) begin
-	do_flip <= no_rotate && flip;
+	do_flip <= flip;
 	if( do_flip ) begin
 		FB_WIDTH  <= hsz;
 		FB_HEIGHT <= vsz;

@@ -207,25 +207,27 @@ wire [11:0] ary;
 always_comb begin
 	arx = 0;
 	ary = 0;
-	if (rotate) begin
-		if (border & rotate) begin
-			arx = 12'd35;
-			ary = 12'd47;
-		end else if (~border & rotate) begin
-			arx = 12'd21;
-			ary = 12'd32;
-		end
-	end else if (~rotate) begin
-		if (border & ~rotate) begin
-			arx = 12'd47;
-			ary = 12'd35;
-		end else if (~border & ~rotate) begin
-			arx = 12'd32;
-			ary = 12'd21;
-		end
-	end else if (gg) begin
+	if (gg) begin
 		arx = 12'd4;
 		arx = 12'd3;
+	end else begin
+		if (rotate) begin
+			if (border & rotate) begin
+				arx = 12'd35;
+				ary = 12'd47;
+			end else if (~border & rotate) begin
+				arx = 12'd21;
+				ary = 12'd32;
+			end
+		end else if (~rotate) begin
+			if (border & ~rotate) begin
+				arx = 12'd47;
+				ary = 12'd35;
+			end else if (~border & ~rotate) begin
+				arx = 12'd32;
+				ary = 12'd21;
+			end
+		end
 	end
 end
 

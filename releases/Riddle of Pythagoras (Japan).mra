@@ -37,8 +37,8 @@
 		<dip name="Service Toggle" bits="18" ids="On,Off"/>
 		<dip name="Service Mode" bits="19" ids="On,Off"/>
 	</switches>
-	
-	<rom index="1" zip="ridleofp.zip" type="merged" md5="22cff7d82820707800ed419441475842">
+
+	<rom index="0" zip="ridleofp.zip" type="merged" md5="22cff7d82820707800ed419441475842">
 		<!-- banks, size: 0x40000 -->
 		<part crc="35964109" name="epr-10425.bin"/>
 		<part crc="FCDA1DFA" name="epr-10424.bin"/>

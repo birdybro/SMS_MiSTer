@@ -201,14 +201,41 @@ end
 
 wire [1:0] ar = status[27:26];
 wire rotate = status[41];
+wire [11:0] arx;
+wire [11:0] ary;
+
+always_comb begin
+	arx = 0;
+	ary = 0;
+	if (rotate) begin
+		if (border & rotate) begin
+			arx = 12'd35;
+			ary = 12'd47;
+		end else if (~border & rotate) begin
+			arx = 12'd21;
+			ary = 12'd32;
+		end
+	end else if (~rotate) begin
+		if (border & ~rotate) begin
+			arx = 12'd47;
+			ary = 12'd35;
+		end else if (~border & ~rotate) begin
+			arx = 12'd32;
+			ary = 12'd21;
+		end
+	end else if (gg) begin
+		arx = 12'd4;
+		arx = 12'd3;
+	end
+end
 
 wire vga_de;
 video_freak video_freak
 (
 	.*,
 	.VGA_DE_IN(vga_de),
-	.ARX((!ar) ? (rotate ? (gg ? 12'd4 : (border ? 12'd47 : 12'd32)) : (border ? 12'd35 : 12'd21)) : (ar - 1'd1)),
-	.ARY((!ar) ? (rotate ? (gg ? 12'd3 : (border ? 12'd35 : 12'd21)) : (border ? 12'd47 : 12'd32)) : 12'd0),
+	.ARX((!ar) ? arx : (ar - 1'd1)),
+	.ARY((!ar) ? ary : 12'd0),
 	.CROP_SIZE(en216p && vcrop_en ? 10'd216 : 10'd0),
 	.CROP_OFF(voff),
 	.SCALE(status[31:30])
@@ -220,7 +247,7 @@ video_freak video_freak
 // 0         1         2         3          4         5         6   
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXX        XXXXX
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXXX       XXXXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -228,7 +255,6 @@ parameter CONF_STR = {
 	"-;",
 	"H8FS1,SMSSG;",
 	"H8FS2,GG;",
-	"h8d8o9,Orientation,Vert,Horz;",
 	"DIP;",
 	"-;",
 	"C,Cheats;",
@@ -251,7 +277,9 @@ parameter CONF_STR = {
 	"P1,Audio & Video;",
 	"P1-;",
 	"P1O2,TV System,NTSC,PAL;",
-	"P1OQR,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
+	"H10P1o9,Orientation,Vert,Horz;",
+	"h8P1oA,Vertical Flip,Off,On;",
+	"H9P1OQR,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"P1O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"d6P1oI,Vertical Crop,Disabled,216p(5x);",
 	"d6P1oJM,Crop Offset,0,2,4,8,10,12,-12,-10,-8,-6,-4,-2;",
@@ -415,7 +443,7 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(0)) hps_io
 	.buttons(buttons),
 	.ps2_key(ps2_key),
 	.status(status),
-	.status_menumask({direct_video,systeme,~dbg_menu,en216p,status[13],~gun_en,~raw_serial,gg,~gg_avail,~bk_ena}),
+	.status_menumask({~mod_rotate,direct_video,systeme,~dbg_menu,en216p,status[13],~gun_en,~raw_serial,gg,~gg_avail,~bk_ena}),
 	.forced_scandoubler(forced_scandoubler),
 	.video_rotated(video_rotated),
 	.new_vmode(pal),
@@ -467,10 +495,7 @@ always @(posedge clk_sys) begin
 	end
 end
 
-localparam mod_megumi = 1;
-
-reg [7:0] mod = 255;
-always @(posedge clk_sys) if (ioctl_wr & (ioctl_index==1)) mod <= ioctl_dout;
+wire mod_rotate = (ioctl_index==4 && ioctl_dout==04);
 
 sdram ram
 (
@@ -962,8 +987,8 @@ always @(posedge CLK_VIDEO) begin
 end
 
 wire no_rotate  = status[41] | direct_video ;
-wire rotate_ccw = 0;
-wire flip       = 0;
+wire rotate_ccw = 1;
+wire flip       = status[42];
 
 screen_rotate screen_rotate (.*);
 

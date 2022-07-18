@@ -208,18 +208,18 @@ always_comb begin
 	arx = 0;
 	ary = 0;
 	if (rotate) begin
-		if (border & rotate) begin
+		if (border & ~rotate) begin
 			arx = 12'd35;
 			ary = 12'd47;
-		end else if (~border & rotate) begin
+		end else if (~border & ~rotate) begin
 			arx = 12'd21;
 			ary = 12'd32;
 		end
-	end else if (~rotate) begin
-		if (border & ~rotate) begin
+	end else if (rotate) begin
+		if (border & rotate) begin
 			arx = 12'd47;
 			ary = 12'd35;
-		end else if (~border & ~rotate) begin
+		end else if (~border & rotate) begin
 			arx = 12'd32;
 			ary = 12'd21;
 		end
@@ -247,7 +247,7 @@ video_freak video_freak
 // 0         1         2         3          4         5         6   
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXXX       XXXXX
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXX        XXXXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -277,9 +277,8 @@ parameter CONF_STR = {
 	"P1,Audio & Video;",
 	"P1-;",
 	"P1O2,TV System,NTSC,PAL;",
-	"H10P1o9,Orientation,Vert,Horz;",
-	"h8P1oA,Vertical Flip,Off,On;",
-	"H9P1OQR,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
+	"P1o9,Orientation,Vert,Horz;",
+	"P1OQR,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"P1O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"d6P1oI,Vertical Crop,Disabled,216p(5x);",
 	"d6P1oJM,Crop Offset,0,2,4,8,10,12,-12,-10,-8,-6,-4,-2;",
@@ -988,7 +987,7 @@ end
 
 wire no_rotate  = status[41] | direct_video ;
 wire rotate_ccw = 1;
-wire flip       = status[42];
+wire flip       = 1;
 
 screen_rotate screen_rotate (.*);
 

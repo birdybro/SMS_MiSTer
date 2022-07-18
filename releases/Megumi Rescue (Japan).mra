@@ -35,7 +35,7 @@
 		<dip name="Service Mode" bits="19" ids="On,Off"/>
 	</switches>
 	
-	<rom index="0" zip="megrescu.zip" type="merged" md5="31084284291fe1328d7963a3eda660fa">
+	<rom index="1" zip="megrescu.zip" type="merged" md5="31084284291fe1328d7963a3eda660fa">
 		<!-- banks, size: 0x40000 -->
 		<part crc="278CABA8" name="v10_30ic.5"/>
 		<part crc="BDA242D1" name="v10_30ic.4"/>

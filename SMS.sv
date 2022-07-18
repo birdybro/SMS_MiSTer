@@ -180,7 +180,6 @@ assign VGA_F1 = 0;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 
 assign {SD_SCK, SD_MOSI, SD_CS} = '1;
-assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DDRAM_WE} = '0;
 
 assign LED_USER  = cart_download | bk_state | (status[25] & bk_pending);
 assign LED_DISK  = 0;
@@ -188,6 +187,7 @@ assign LED_POWER = 0;
 assign BUTTONS   = osd_btn;
 assign VGA_SCALER= 0;
 assign HDMI_FREEZE = 0;
+assign FB_FORCE_BLANK = 0;
 
 wire       vcrop_en = status[50];
 wire [3:0] vcopt    = status[54:51];
@@ -200,13 +200,15 @@ always @(posedge CLK_VIDEO) begin
 end
 
 wire [1:0] ar = status[27:26];
+wire rotate = status[41];
+
 wire vga_de;
 video_freak video_freak
 (
 	.*,
 	.VGA_DE_IN(vga_de),
-	.ARX((!ar) ? (gg ? 12'd4 : (border ? 12'd47 : 12'd32)) : (ar - 1'd1)),
-	.ARY((!ar) ? (gg ? 12'd3 : (border ? 12'd35 : 12'd21)) : 12'd0),
+	.ARX((!ar) ? (rotate ? (gg ? 12'd4 : (border ? 12'd47 : 12'd32)) : (border ? 12'd35 : 12'd21)) : (ar - 1'd1)),
+	.ARY((!ar) ? (rotate ? (gg ? 12'd3 : (border ? 12'd35 : 12'd21)) : (border ? 12'd47 : 12'd32)) : 12'd0),
 	.CROP_SIZE(en216p && vcrop_en ? 10'd216 : 10'd0),
 	.CROP_OFF(voff),
 	.SCALE(status[31:30])
@@ -218,7 +220,7 @@ video_freak video_freak
 // 0         1         2         3          4         5         6   
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXX         XXXXX
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXX        XXXXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -226,6 +228,7 @@ parameter CONF_STR = {
 	"-;",
 	"H8FS1,SMSSG;",
 	"H8FS2,GG;",
+	"h8d8o9,Orientation,Vert,Horz;",
 	"DIP;",
 	"-;",
 	"C,Cheats;",
@@ -389,6 +392,8 @@ wire        img_readonly;
 wire [63:0] img_size;
 
 wire        forced_scandoubler;
+wire        direct_video;
+wire        video_rotated;
 wire [21:0] gamma_bus;
 
 wire [24:0] ps2_mouse;
@@ -410,10 +415,12 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(0)) hps_io
 	.buttons(buttons),
 	.ps2_key(ps2_key),
 	.status(status),
-	.status_menumask({systeme,~dbg_menu,en216p,status[13],~gun_en,~raw_serial,gg,~gg_avail,~bk_ena}),
+	.status_menumask({direct_video,systeme,~dbg_menu,en216p,status[13],~gun_en,~raw_serial,gg,~gg_avail,~bk_ena}),
 	.forced_scandoubler(forced_scandoubler),
+	.video_rotated(video_rotated),
 	.new_vmode(pal),
 	.gamma_bus(gamma_bus),
+	.direct_video(direct_video),
 
 	.ps2_kbd_led_use(0),
 	.ps2_kbd_led_status(0),
@@ -459,6 +466,11 @@ always @(posedge clk_sys) begin
 		if ((ioctl_index==254) && !ioctl_addr[24:2]) DSW[ioctl_addr[1:0]] <= ioctl_dout;
 	end
 end
+
+localparam mod_megumi = 1;
+
+reg [7:0] mod = 255;
+always @(posedge clk_sys) if (ioctl_wr & (ioctl_index==1)) mod <= ioctl_dout;
 
 sdram ram
 (
@@ -948,6 +960,12 @@ always @(posedge CLK_VIDEO) begin
 	HSync <= HS;
 	if(~HSync & HS) VSync <= VS;
 end
+
+wire no_rotate  = status[41] | direct_video ;
+wire rotate_ccw = 0;
+wire flip       = 0;
+
+screen_rotate screen_rotate (.*);
 
 video_mixer #(.HALF_DEPTH(1), .LINE_LENGTH(300), .GAMMA(1)) video_mixer
 (

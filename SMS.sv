@@ -208,18 +208,18 @@ always_comb begin
 	arx = 0;
 	ary = 0;
 	if (rotate) begin
-		if (border & ~rotate) begin
+		if (border & rotate) begin
 			arx = 12'd35;
 			ary = 12'd47;
-		end else if (~border & ~rotate) begin
+		end else if (~border & rotate) begin
 			arx = 12'd21;
 			ary = 12'd32;
 		end
-	end else if (rotate) begin
-		if (border & rotate) begin
+	end else if (~rotate) begin
+		if (border & ~rotate) begin
 			arx = 12'd47;
 			ary = 12'd35;
-		end else if (~border & rotate) begin
+		end else if (~border & ~rotate) begin
 			arx = 12'd32;
 			ary = 12'd21;
 		end
@@ -247,7 +247,7 @@ video_freak video_freak
 // 0         1         2         3          4         5         6   
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXX        XXXXX
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXXX       XXXXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -277,8 +277,9 @@ parameter CONF_STR = {
 	"P1,Audio & Video;",
 	"P1-;",
 	"P1O2,TV System,NTSC,PAL;",
-	"P1o9,Orientation,Vert,Horz;",
-	"P1OQR,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
+	"P1h8h9o9,Orientation,Horz,Vert;",
+	"P1h8h9oA,Vertical Flip,Off,On;",
+	"P1h9OQR,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"P1O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"d6P1oI,Vertical Crop,Disabled,216p(5x);",
 	"d6P1oJM,Crop Offset,0,2,4,8,10,12,-12,-10,-8,-6,-4,-2;",
@@ -288,9 +289,9 @@ parameter CONF_STR = {
 	"D2P1OD,Border,No,Yes;",
 	"D5P1OST,Masked left column,BG,Black,Cut;",
 	"P1O8,Sprites per line,Standard,All;",
-	"d2P1o7,Game Gear Res.,Standard,Extended;",
+	"d2P1H8o7,Game Gear Res.,Standard,Extended;",
 	"P1-;",
-	"D2P1OC,SMS FM sound,Enable,Disable;",
+	"D2P1H8OC,SMS FM sound,Enable,Disable;",
 
 	"P2,Input;",
 	"P2-;",
@@ -442,7 +443,7 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(0)) hps_io
 	.buttons(buttons),
 	.ps2_key(ps2_key),
 	.status(status),
-	.status_menumask({~mod_rotate,direct_video,systeme,~dbg_menu,en216p,status[13],~gun_en,~raw_serial,gg,~gg_avail,~bk_ena}),
+	.status_menumask({direct_video,systeme,~dbg_menu,en216p,status[13],~gun_en,~raw_serial,gg,~gg_avail,~bk_ena}),
 	.forced_scandoubler(forced_scandoubler),
 	.video_rotated(video_rotated),
 	.new_vmode(pal),
@@ -493,8 +494,6 @@ always @(posedge clk_sys) begin
 		if ((ioctl_index==254) && !ioctl_addr[24:2]) DSW[ioctl_addr[1:0]] <= ioctl_dout;
 	end
 end
-
-wire mod_rotate = (ioctl_index==4 && ioctl_dout==04);
 
 sdram ram
 (
@@ -985,9 +984,9 @@ always @(posedge CLK_VIDEO) begin
 	if(~HSync & HS) VSync <= VS;
 end
 
-wire no_rotate  = status[41] | direct_video ;
+wire no_rotate  = ~status[41] | direct_video;
 wire rotate_ccw = 1;
-wire flip       = 1;
+wire flip       = status[42];
 
 screen_rotate screen_rotate (.*);
 

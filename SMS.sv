@@ -609,7 +609,7 @@ always @(posedge clk_sys) begin
 			cart_mask <= 0;
 		if (ioctl_addr == 512) 
 			cart_mask512 <= 0;
-			gg <= ioctl_index[4:0] == 2;	
+		gg <= ioctl_index[4:0] == 2;
 		if ((ioctl_index[4:0] == 1) || (ioctl_index[4:0] == 2))
 			systeme <= 1'b0;
 		if ((ioctl_index[4:0] == 1) && (ioctl_index[6:5] == 2'b10)) // .SG file extension

@@ -180,7 +180,7 @@ begin
 	color <= "000000000000" when black_column='1' and mask_column0='1' and x>0 and x<9 else
 			cram_D when smode_M4='1' else 
 			-- How an SMS VDP handles Legacy TMS Modes to produce these values
-			x"000" when   out_color="0000" or out_color="0001" else -- Transparent or Black
+			x"000" when  out_color="0000" or out_color="0001"  else -- Transparent or Black
 			X"4A2" when (out_color="0010" and palettemode='0') else -- Medium Green
 			X"7E6" when (out_color="0011" and palettemode='0') else -- Light Green
 			X"F55" when (out_color="0100" and palettemode='0') else -- Dark Blue
@@ -208,5 +208,5 @@ begin
 			x"3B2" when (out_color="1100" and palettemode='1') else -- Dark Green
 			x"B5C" when (out_color="1101" and palettemode='1') else -- Magenta
 			x"CCC" when (out_color="1110" and palettemode='1') else -- Gray
-			x"FFF";                                                 -- White
+			x"FFF"                                                ; -- White
 end Behavioral;

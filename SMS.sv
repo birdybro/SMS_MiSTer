@@ -613,7 +613,7 @@ always @(posedge clk_sys) begin
 		if ((ioctl_index[4:0] == 1) || (ioctl_index[4:0] == 2))
 			systeme <= 1'b0;
 		if ((ioctl_index[4:0] == 1) && (ioctl_index[6:5] == 2'b10)) // .SG file extension
-			palettemode <= 1'b1;
+			sg1000 <= 1'b1;
 	end;
 	if (old_download & ~cart_download) begin
 		cart_sz512 <= ioctl_addr[9];
@@ -701,7 +701,7 @@ system #(63) system
 	.x(x),
 	.y(y),
 	.color(color),
-	.palettemode(palettemode),
+	.sg1000(sg1000),
 	.mask_column(mask_column),
 	.black_column(status[28] && ~status[13]),
 	.smode_M1(smode_M1),

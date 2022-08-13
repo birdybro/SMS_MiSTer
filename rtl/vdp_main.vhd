@@ -23,7 +23,7 @@ entity vdp_main is
 		y:						in  std_logic_vector(8 downto 0);
 			
 		color:				out std_logic_vector (11 downto 0);
-		palettemode:		in std_logic;
+		sg1000:		in std_logic;
 		y1:               out std_logic;
 					
 		display_on:			in  std_logic;
@@ -180,33 +180,33 @@ begin
 	color <= "000000000000" when black_column='1' and mask_column0='1' and x>0 and x<9 else
 			cram_D when smode_M4='1' else 
 			-- How an SMS VDP handles Legacy TMS Modes to produce these values
-			x"000" when   out_color="0000" or out_color="0001" else -- Transparent or Black
-			X"4A2" when (out_color="0010" and palettemode='0') else -- Medium Green
-			X"7E6" when (out_color="0011" and palettemode='0') else -- Light Green
-			X"F55" when (out_color="0100" and palettemode='0') else -- Dark Blue
-			X"F88" when (out_color="0101" and palettemode='0') else -- Light Blue
-			X"55D" when (out_color="0110" and palettemode='0') else -- Dark red
-			X"FF4" when (out_color="0111" and palettemode='0') else -- Cyan
-			X"55F" when (out_color="1000" and palettemode='0') else -- Medium Red
-			X"88F" when (out_color="1001" and palettemode='0') else -- Light Red
-			X"5DD" when (out_color="1010" and palettemode='0') else -- Dark Yellow
-			X"8DE" when (out_color="1011" and palettemode='0') else -- Light Yellow
-			X"4B2" when (out_color="1100" and palettemode='0') else -- Dark Green
-			X"A6B" when (out_color="1101" and palettemode='0') else -- Magenta
-			X"BBB" when (out_color="1110" and palettemode='0') else -- Gray
+			x"000" when out_color="0000" or out_color="0001" else -- Transparent or Black
+			X"4A2" when ( out_color="0010" and sg1000='0' ) else  -- Medium Green
+			X"7E6" when ( out_color="0011" and sg1000='0' ) else  -- Light Green
+			X"F55" when ( out_color="0100" and sg1000='0' ) else  -- Dark Blue
+			X"F88" when ( out_color="0101" and sg1000='0' ) else  -- Light Blue
+			X"55D" when ( out_color="0110" and sg1000='0' ) else  -- Dark red
+			X"FF4" when ( out_color="0111" and sg1000='0' ) else  -- Cyan
+			X"55F" when ( out_color="1000" and sg1000='0' ) else  -- Medium Red
+			X"88F" when ( out_color="1001" and sg1000='0' ) else  -- Light Red
+			X"5DD" when ( out_color="1010" and sg1000='0' ) else  -- Dark Yellow
+			X"8DE" when ( out_color="1011" and sg1000='0' ) else  -- Light Yellow
+			X"4B2" when ( out_color="1100" and sg1000='0' ) else  -- Dark Green
+			X"A6B" when ( out_color="1101" and sg1000='0' ) else  -- Magenta
+			X"BBB" when ( out_color="1110" and sg1000='0' ) else  -- Gray
 			-- Equivalent values to original TMS chip output from SG-1000
-			x"4C2" when (out_color="0010" and palettemode='1') else -- Medium Green
-			x"7D5" when (out_color="0011" and palettemode='1') else -- Light Green
-			x"E55" when (out_color="0100" and palettemode='1') else -- Dark Blue
-			x"F77" when (out_color="0101" and palettemode='1') else -- Light Blue
-			x"45D" when (out_color="0110" and palettemode='1') else -- Dark red
-			x"FE4" when (out_color="0111" and palettemode='1') else -- Cyan
-			x"55F" when (out_color="1000" and palettemode='1') else -- Medium Red
-			x"77F" when (out_color="1001" and palettemode='1') else -- Light Red
-			x"5CD" when (out_color="1010" and palettemode='1') else -- Dark Yellow
-			x"8CE" when (out_color="1011" and palettemode='1') else -- Light Yellow
-			x"3B2" when (out_color="1100" and palettemode='1') else -- Dark Green
-			x"B5C" when (out_color="1101" and palettemode='1') else -- Magenta
-			x"CCC" when (out_color="1110" and palettemode='1') else -- Gray
-			x"FFF";                                                 -- White
+			x"4C2" when ( out_color="0010" and sg1000='1' ) else  -- Medium Green
+			x"7D5" when ( out_color="0011" and sg1000='1' ) else  -- Light Green
+			x"E55" when ( out_color="0100" and sg1000='1' ) else  -- Dark Blue
+			x"F77" when ( out_color="0101" and sg1000='1' ) else  -- Light Blue
+			x"45D" when ( out_color="0110" and sg1000='1' ) else  -- Dark red
+			x"FE4" when ( out_color="0111" and sg1000='1' ) else  -- Cyan
+			x"55F" when ( out_color="1000" and sg1000='1' ) else  -- Medium Red
+			x"77F" when ( out_color="1001" and sg1000='1' ) else  -- Light Red
+			x"5CD" when ( out_color="1010" and sg1000='1' ) else  -- Dark Yellow
+			x"8CE" when ( out_color="1011" and sg1000='1' ) else  -- Light Yellow
+			x"3B2" when ( out_color="1100" and sg1000='1' ) else  -- Dark Green
+			x"B5C" when ( out_color="1101" and sg1000='1' ) else  -- Magenta
+			x"CCC" when ( out_color="1110" and sg1000='1' ) else  -- Gray
+			x"FFF";                                               -- White
 end Behavioral;

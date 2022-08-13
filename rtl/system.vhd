@@ -77,7 +77,7 @@ entity system is
 		x:				in	 STD_LOGIC_VECTOR(8 downto 0);
 		y:				in	 STD_LOGIC_VECTOR(8 downto 0);
 		color:		out STD_LOGIC_VECTOR(11 downto 0);
-		palettemode:	in	STD_LOGIC;
+		sg1000:	in	STD_LOGIC;
 		mask_column:out STD_LOGIC;
 		black_column:		in STD_LOGIC;
 		smode_M1:		out STD_LOGIC;
@@ -347,7 +347,7 @@ begin
 		x			=> x,
 		y			=> y,
 		color		=> vdp_color,
-		palettemode	=> palettemode,
+		sg1000	=> sg1000,
 		y1       => vdp_y1,
 		smode_M1  => smode_M1,
 		smode_M2  => smode_M2,
@@ -385,7 +385,7 @@ begin
 		x			=> x,
 		y			=> y,
 		color		=> vdp2_color,
-		palettemode	=> palettemode,
+		sg1000	=> sg1000,
 		y1       => vdp2_y1,
 --		smode_M1  => smode2_M1,
 --		smode_M2  => smode2_M2,

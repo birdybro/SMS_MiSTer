@@ -592,9 +592,9 @@ always @(posedge clk_sys) begin
 	if(cart_download || bk_loading) dbr <= 1;
 end
 
-reg        gg          = 0;
-reg        systeme     = 0;
-reg        sg1000 = 0;
+reg        gg      = 0;
+reg        systeme = 0;
+reg        sg1000  = 0;
 reg [21:0] cart_mask, cart_mask512;
 reg        cart_sz512;
 
@@ -644,7 +644,7 @@ system #(63) system
 	.gg(gg),
 	.ggres(ggres),
 	.systeme(systeme),
-	.bios_en(~status[11] & ~systeme),
+	.bios_en(~status[11] & ~systeme & ~sg1000),
 
 	.RESET_n(~reset),
 

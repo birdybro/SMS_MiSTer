@@ -11,113 +11,112 @@ entity system is
 		BASE_DIR : string := ""
 	);
 	port (
-		clk_sys:		in	 STD_LOGIC;
-		ce_cpu:		in	 STD_LOGIC;
-		ce_vdp:		in	 STD_LOGIC;
-		ce_pix:		in	 STD_LOGIC; 
-		ce_sp:		in	 STD_LOGIC;
-		turbo:		in	 STD_LOGIC;
-		gg:			in	 STD_LOGIC;
-		ggres:			in STD_LOGIC;
-		systeme:		in  STD_LOGIC;
-		-- sg:			in	 STD_LOGIC;		-- sg1000
-		bios_en:	in	 STD_LOGIC;
+		clk_sys:      in  std_logic;
+		ce_cpu:       in  std_logic;
+		ce_vdp:       in  std_logic;
+		ce_pix:       in  std_logic;
+		ce_sp:        in  std_logic;
+		turbo:        in  std_logic;
+		gg:           in  std_logic;
+		ggres:        in  std_logic;
+		systeme:      in  std_logic;
+		sg1000:       in  std_logic;
+		bios_en:      in  std_logic;
 
-		GG_EN		: in std_logic; -- Game Genie not game gear
-		GG_CODE		: in std_logic_vector(128 downto 0); -- game genie code
-		GG_RESET	: in std_logic;
-		GG_AVAIL	: out std_logic;
+		GG_EN:        in  std_logic; -- Game Genie not game gear
+		GG_CODE:      in  std_logic_vector(128 downto 0); -- game genie code
+		GG_RESET:     in  std_logic;
+		GG_AVAIL:     out std_logic;
 
-		RESET_n:		in	 STD_LOGIC;
+		RESET_n:      in  std_logic;
 
-		rom_rd:  	out STD_LOGIC;
-		rom_a:		out STD_LOGIC_VECTOR(21 downto 0);
-		rom_do:		in	 STD_LOGIC_VECTOR(7 downto 0);
+		rom_rd:       out std_logic;
+		rom_a:        out std_logic_vector(21 downto 0);
+		rom_do:       in  std_logic_vector( 7 downto 0);
 
-		j1_up:		in	 STD_LOGIC;
-		j1_down:		in	 STD_LOGIC;
-		j1_left:		in	 STD_LOGIC;
-		j1_right:	in	 STD_LOGIC;
-		j1_tl:		in	 STD_LOGIC;
-		j1_tr:		in	 STD_LOGIC;
-		j1_th:		in  STD_LOGIC;
-		j1_start:	in  STD_LOGIC;
-		j1_coin:		in  STD_LOGIC;
-		j1_a3:		in  STD_LOGIC;
-		j2_up:		in	 STD_LOGIC;
-		j2_down:		in	 STD_LOGIC;
-		j2_left:		in	 STD_LOGIC;
-		j2_right:	in	 STD_LOGIC;
-		j2_tl:		in	 STD_LOGIC;
-		j2_tr:		in	 STD_LOGIC;
-		j2_th:		in  STD_LOGIC;
-		j2_start:	in  STD_LOGIC;
-		j2_coin:		in  STD_LOGIC;
-		j2_a3:		in  STD_LOGIC;
-		pause:		in	 STD_LOGIC;
-		
-		E0Type:	in  STD_LOGIC_VECTOR(1 downto 0);
-		E1Use:	in	 STD_LOGIC;
-		E2Use:	in	 STD_LOGIC;
-		E0:		in  STD_LOGIC_VECTOR(7 downto 0);
-		F2:		in  STD_LOGIC_VECTOR(7 downto 0);
-		F3:		in  STD_LOGIC_VECTOR(7 downto 0);
+		j1_up:        in  std_logic;
+		j1_down:      in  std_logic;
+		j1_left:      in  std_logic;
+		j1_right:     in  std_logic;
+		j1_tl:        in  std_logic;
+		j1_tr:        in  std_logic;
+		j1_th:        in  std_logic;
+		j1_start:     in  std_logic;
+		j1_coin:      in  std_logic;
+		j1_a3:        in  std_logic;
+		j2_up:        in  std_logic;
+		j2_down:      in  std_logic;
+		j2_left:      in  std_logic;
+		j2_right:     in  std_logic;
+		j2_tl:        in  std_logic;
+		j2_tr:        in  std_logic;
+		j2_th:        in  std_logic;
+		j2_start:     in  std_logic;
+		j2_coin:      in  std_logic;
+		j2_a3:        in  std_logic;
+		pause:        in  std_logic;
 
-		has_paddle:	in  STD_LOGIC;
-		has_pedal:	in  STD_LOGIC;
-		paddle:		in  STD_LOGIC_VECTOR(7 downto 0);
-		paddle2:		in  STD_LOGIC_VECTOR(7 downto 0);
-		pedal:		in  STD_LOGIC_VECTOR(7 downto 0);
+		E0Type:       in  std_logic_vector( 1 downto 0);
+		E1Use:        in  std_logic;
+		E2Use:        in  std_logic;
+		E0:           in  std_logic_vector( 7 downto 0);
+		F2:           in  std_logic_vector( 7 downto 0);
+		F3:           in  std_logic_vector( 7 downto 0);
 
-		j1_tr_out:	out STD_LOGIC;
-		j1_th_out:	out STD_LOGIC;
-		j2_tr_out:	out STD_LOGIC;
-		j2_th_out:	out STD_LOGIC;
+		has_paddle:   in  std_logic;
+		has_pedal:    in  std_logic;
+		paddle:       in  std_logic_vector( 7 downto 0);
+		paddle2:      in  std_logic_vector( 7 downto 0);
+		pedal:        in  std_logic_vector( 7 downto 0);
 
-		x:				in	 STD_LOGIC_VECTOR(8 downto 0);
-		y:				in	 STD_LOGIC_VECTOR(8 downto 0);
-		color:		out STD_LOGIC_VECTOR(11 downto 0);
-		palettemode:	in	STD_LOGIC;
-		mask_column:out STD_LOGIC;
-		black_column:		in STD_LOGIC;
-		smode_M1:		out STD_LOGIC;
-		smode_M2:		out STD_LOGIC;
-		smode_M3:		out STD_LOGIC;
-		ysj_quirk:		in	STD_LOGIC;
-		pal:				in STD_LOGIC;
-		region:			in	STD_LOGIC;
-		mapper_lock:	in STD_LOGIC;
-		vdp_enables:	in STD_LOGIC_VECTOR(1 downto 0);
-		psg_enables:	in STD_LOGIC_VECTOR(1 downto 0);
+		j1_tr_out:    out std_logic;
+		j1_th_out:    out std_logic;
+		j2_tr_out:    out std_logic;
+		j2_th_out:    out std_logic;
 
-		audioL:		out STD_LOGIC_VECTOR(15 downto 0);
-		audioR:		out STD_LOGIC_VECTOR(15 downto 0);
-		fm_ena:	   in  STD_LOGIC;
+		x:            in  std_logic_vector( 8 downto 0);
+		y:            in  std_logic_vector( 8 downto 0);
+		color:        out std_logic_vector(11 downto 0);
+		mask_column:  out std_logic;
+		black_column: in  std_logic;
+		smode_M1:     out std_logic;
+		smode_M2:     out std_logic;
+		smode_M3:     out std_logic;
+		ysj_quirk:    in  std_logic;
+		pal:          in  std_logic;
+		region:       in  std_logic;
+		mapper_lock:  in  std_logic;
+		vdp_enables:  in  std_logic_vector( 1 downto 0);
+		psg_enables:  in  std_logic_vector( 1 downto 0);
 
-		dbr:			in  STD_LOGIC;
-		sp64:			in  STD_LOGIC;
+		audioL:       out std_logic_vector(15 downto 0);
+		audioR:       out std_logic_vector(15 downto 0);
+		fm_ena:       in  std_logic;
+
+		dbr:          in  std_logic;
+		sp64:         in  std_logic;
 
 		-- Work RAM
-		ram_a:      out STD_LOGIC_VECTOR(13 downto 0);
-		ram_d:      out STD_LOGIC_VECTOR( 7 downto 0);
-		ram_we:     out STD_LOGIC;
-		ram_q:      in  STD_LOGIC_VECTOR( 7 downto 0);
+		ram_a:        out std_logic_vector(13 downto 0);
+		ram_d:        out std_logic_vector( 7 downto 0);
+		ram_we:       out std_logic;
+		ram_q:        in  std_logic_vector( 7 downto 0);
 		
 		-- Backup RAM
-		nvram_a:    out STD_LOGIC_VECTOR(14 downto 0);
-		nvram_d:    out STD_LOGIC_VECTOR( 7 downto 0);
-		nvram_we:   out STD_LOGIC;
-		nvram_q:    in  STD_LOGIC_VECTOR( 7 downto 0);
+		nvram_a:      out std_logic_vector(14 downto 0);
+		nvram_d:      out std_logic_vector( 7 downto 0);
+		nvram_we:     out std_logic;
+		nvram_q:      in  std_logic_vector( 7 downto 0);
 
 		-- MC8123 decryption
-		encrypt:		in  STD_LOGIC_VECTOR(1 downto 0);
-		key_a : 		out STD_LOGIC_VECTOR(12 downto 0);
-		key_d : 		in  STD_LOGIC_VECTOR(7 downto 0);
-		
-		ROMCL  : IN  STD_LOGIC;
-		ROMAD  : IN STD_LOGIC_VECTOR(24 downto 0);
-		ROMDT  : IN STD_LOGIC_VECTOR(7 downto 0);
-		ROMEN  : IN  STD_LOGIC
+		encrypt:      in  std_logic_vector( 1 downto 0);
+		key_a :       out std_logic_vector(12 downto 0);
+		key_d :       in  std_logic_vector( 7 downto 0);
+
+		ROMCL  :      in  std_logic;
+		ROMAD  :      in  std_logic_vector(24 downto 0);
+		ROMDT  :      in  std_logic_vector( 7 downto 0);
+		ROMEN  :      in  std_logic
 
 	);
 end system;
@@ -326,36 +325,36 @@ begin
 	)
 	port map
 	(
-		clk_sys	=> clk_sys,
-		ce_vdp	=> ce_vdp,
-		ce_pix	=> ce_pix,
-		ce_sp		=> ce_sp,
-		sp64		=> sp64,
-		HL			=> HL,
-		gg			=> gg,
-		ggres			=> ggres,
-		-- Bsg			=> sg,		-- sg1000
-		se_bank	=> vdp_se_bank,
-		RD_n		=> vdp_RD_n,
-		WR_n		=> vdp_WR_n,
-		IRQ_n		=> vdp_IRQ_n,
-		WR_direct => vram_WR,
-		A_direct	=> A(13 downto 8),
-		A			=> A(7 downto 0),
-		D_in		=> D_in,
-		D_out		=> vdp_D_out,
-		x			=> x,
-		y			=> y,
-		color		=> vdp_color,
-		palettemode	=> palettemode,
-		y1       => vdp_y1,
-		smode_M1  => smode_M1,
-		smode_M2  => smode_M2,
-		smode_M3  => smode_M3,
-		ysj_quirk	=> ysj_quirk,
-		mask_column => mask_column,
+		clk_sys      => clk_sys,
+		ce_vdp       => ce_vdp,
+		ce_pix       => ce_pix,
+		ce_sp        => ce_sp,
+		sp64         => sp64,
+		HL           => HL,
+		gg           => gg,
+		sg1000       => sg1000,
+		ggres        => ggres,
+		-- Bsg          => sg,  -- sg1000
+		se_bank      => vdp_se_bank,
+		RD_n         => vdp_RD_n,
+		WR_n         => vdp_WR_n,
+		IRQ_n        => vdp_IRQ_n,
+		WR_direct    => vram_WR,
+		A_direct     => A(13 downto 8),
+		A            => A(7 downto 0),
+		D_in         => D_in,
+		D_out        => vdp_D_out,
+		x            => x,
+		y            => y,
+		color        => vdp_color,
+		y1           => vdp_y1,
+		smode_M1     => smode_M1,
+		smode_M2     => smode_M2,
+		smode_M3     => smode_M3,
+		ysj_quirk    => ysj_quirk,
+		mask_column  => mask_column,
 		black_column => black_column,
-		reset_n  => RESET_n
+		reset_n      => RESET_n
 	);
 
 	vdp2_inst: entity work.vdp
@@ -364,36 +363,36 @@ begin
 	)
 	port map
 	(
-		clk_sys	=> clk_sys,
-		ce_vdp	=> ce_vdp,
-		ce_pix	=> ce_pix,
-		ce_sp		=> ce_sp,
-		sp64		=> sp64,
-		HL			=> HL,
-		gg			=> gg,
-		ggres			=> ggres,
-		-- Bsg			=> sg,		-- sg1000
-		se_bank	=> vdp2_se_bank,
-		RD_n		=> vdp2_RD_n,
-		WR_n		=> vdp2_WR_n,
-		IRQ_n		=> vdp2_IRQ_n,
-		WR_direct => vram2_WR,
-		A_direct	=> A(13 downto 8),
-		A			=> A(7 downto 0),
-		D_in		=> D_in,
-		D_out		=> vdp2_D_out,
-		x			=> x,
-		y			=> y,
-		color		=> vdp2_color,
-		palettemode	=> palettemode,
-		y1       => vdp2_y1,
---		smode_M1  => smode2_M1,
---		smode_M2  => smode2_M2,
---		smode_M3  => smode2_M3,
-		ysj_quirk	=> ysj_quirk,
---		mask_column => mask2_column,
+		clk_sys      => clk_sys,
+		ce_vdp       => ce_vdp,
+		ce_pix       => ce_pix,
+		ce_sp        => ce_sp,
+		sp64         => sp64,
+		HL           => HL,
+		gg           => gg,
+		ggres        => ggres,
+		-- Bsg          => sg,  -- sg1000
+		se_bank      => vdp2_se_bank,
+		RD_n         => vdp2_RD_n,
+		WR_n         => vdp2_WR_n,
+		IRQ_n        => vdp2_IRQ_n,
+		WR_direct    => vram2_WR,
+		A_direct     => A(13 downto 8),
+		A            => A(7 downto 0),
+		D_in         => D_in,
+		D_out        => vdp2_D_out,
+		x            => x,
+		y            => y,
+		color        => vdp2_color,
+		sg1000       => sg1000,
+		y1           => vdp2_y1,
+		-- smode_M1     => smode2_M1,
+		-- smode_M2     => smode2_M2,
+		-- smode_M3     => smode2_M3,
+		ysj_quirk    => ysj_quirk,
+		-- mask_column  => mask2_column,
 		black_column => black_column,
-		reset_n  => RESET_n
+		reset_n      => RESET_n
 	);
 
 	psg_inst: jt89

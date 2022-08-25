@@ -41,7 +41,7 @@ entity vdp is
 end vdp;
 
 architecture Behavioral of vdp is
-	
+
 	signal old_RD_n:			STD_LOGIC;
 	signal old_WR_n:			STD_LOGIC;
 	signal old_HL:				STD_LOGIC;
@@ -53,34 +53,34 @@ architecture Behavioral of vdp is
 	signal to_cram:			boolean := false;
 	signal spr_collide:		std_logic;
 	signal spr_overflow:		std_logic;
-	
+
 	-- vram and cram lines for the cpu interface
 	signal vram_cpu_A:		std_logic_vector(14 downto 0);
 	signal xram_cpu_A:		std_logic_vector(13 downto 0);
 	signal vram_cpu_WE:		std_logic;
 	signal cram_cpu_WE:		std_logic;
-	signal vram_cpu_D_out:	std_logic_vector(7 downto 0);	
-	signal vram_cpu_D_outl:	std_logic_vector(7 downto 0);	
+	signal vram_cpu_D_out:	std_logic_vector(7 downto 0);
+	signal vram_cpu_D_outl:	std_logic_vector(7 downto 0);
 	signal xram_cpu_A_incr:	std_logic := '0';
 	signal xram_cpu_read:	std_logic := '0';
-	
+
 	-- vram and cram lines for the video interface
 	signal vram_vdp_A:		std_logic_vector(13 downto 0);
-	signal vram_vdp_D:		std_logic_vector(7 downto 0);	
+	signal vram_vdp_D:		std_logic_vector(7 downto 0);
 	signal cram_vdp_A:		std_logic_vector(4 downto 0);
 	signal cram_vdp_D:		std_logic_vector(11 downto 0);
 	signal cram_vdp_A_in:	std_logic_vector(4 downto 0);
 	signal cram_vdp_D_in:	std_logic_vector(11 downto 0);
-			
+
 	-- control bits
 	signal display_on:		std_logic := '1';
 	signal disable_hscroll:	std_logic := '0';
 	signal disable_vscroll: std_logic := '0';
 	signal mask_column0:		std_logic := '0';
-	signal overscan:			std_logic_vector (3 downto 0) := "0000";	
+	signal overscan:			std_logic_vector (3 downto 0) := "0000";
 	signal irq_frame_en:		std_logic := '0';
 	signal irq_line_en:		std_logic := '0';
-	signal irq_line_count:	std_logic_vector(7 downto 0) := (others=>'1');	
+	signal irq_line_count:	std_logic_vector(7 downto 0) := (others=>'1');
 	signal bg_address:		std_logic_vector (3 downto 0) := (others=>'0');
 	signal m2mg_address:		std_logic_vector (2 downto 0) := (others=>'0');
 	signal m2ct_address:		std_logic_vector (7 downto 0) := (others=>'1');
@@ -114,9 +114,9 @@ architecture Behavioral of vdp is
 	signal xmode_M1:			std_logic;
 	signal xmode_M3:			std_logic;
 	signal xmode_M4:			std_logic;
-	
+
 begin
-	
+
 	mask_column <= mask_column0;
 	xmode_M1<= mode_M1 and mode_M2 ;
 	xmode_M3<= mode_M3 and mode_M2 ;
@@ -137,7 +137,7 @@ begin
 		vram_D			=> vram_vdp_D,
 		cram_A			=> cram_vdp_A,
 		cram_D			=> cram_vdp_D,
-				
+
 		x					=> x,
 		y					=> y,
 
@@ -148,7 +148,7 @@ begin
 		smode_M3			=> xmode_M3,
 		smode_M4			=> xmode_M4,
 		ysj_quirk			=> ysj_quirk,
-						
+
 		display_on		=> display_on,
 		mask_column0	=> mask_column0,
 		black_column	=> black_column,
@@ -170,7 +170,7 @@ begin
 		spr_collide		=> spr_collide,
 		spr_overflow	=> spr_overflow);
 
-    
+
   vdp_vram_inst : entity work.dpram
     generic map
     (
@@ -208,12 +208,12 @@ begin
 	cram_cpu_WE <= data_write when to_cram and ((gg='0') or (xram_cpu_A(0)='1')) and WR_direct='0' else '0';
 	vram_cpu_WE <= data_write when (WR_direct='1' or not to_cram) else '0';
 	vram_cpu_A <= not se_bank & A_direct & A when WR_direct='1' else se_bank & xram_cpu_A;
-	
+
 	smode_M1 <= mode_M1 and mode_M2 ;
 	smode_M2 <= mode_M2;
 	smode_M3 <= mode_M3 and mode_M2 ;
 	smode_M4 <= mode_M4;
-	
+
 	process (clk_sys, reset_n)
 	variable reset_set: boolean ;
 	begin
@@ -241,7 +241,7 @@ begin
 			mode_M2			<= '0';
 			mode_M3			<= '0';
 			mode_M4			<= '1';
-			
+
 		elsif rising_edge(clk_sys) then
 			data_write <= '0';
 			reset_set := false ;
@@ -316,7 +316,7 @@ begin
 						end if;
 						address_ff <= not address_ff;
 					end if;
-					
+
 				elsif old_RD_n = '1' and RD_n='0' then
 					case A(7 downto 6)&A(0) is
 					when "010" => -- VCounter
@@ -338,7 +338,7 @@ begin
 						reset_flags <= true;
 						reset_set := true ;
 					when others =>
-					end case;					
+					end case;
 				elsif xram_cpu_A_incr='1' then
 					xram_cpu_A <= xram_cpu_A + 1;
 					xram_cpu_A_incr <= '0';
@@ -360,10 +360,10 @@ begin
 	begin
 		if rising_edge(clk_sys) then
 			if ce_vdp = '1' then
---				485 instead of 487 to please VDPTEST 
-				if	x=485 and ((y=224 and xmode_M1='1') 
-					  or (y=240 and xmode_M3='1') 
-					  or (y=192 and xmode_M1='0' and xmode_M3='0')) 
+--				485 instead of 487 to please VDPTEST
+				if	x=485 and ((y=224 and xmode_M1='1')
+					  or (y=240 and xmode_M3='1')
+					  or (y=192 and xmode_M1='0' and xmode_M3='0'))
 					and not (last_x0=std_logic(x(0))) then
 					vbl_irq <= '1';
 				elsif reset_flags then
@@ -372,7 +372,7 @@ begin
 			end if;
 		end if;
 	end process;
-	
+
 	process (clk_sys)
 	begin
 		if rising_edge(clk_sys) then
@@ -399,41 +399,42 @@ begin
 	process (clk_sys)
 	begin
 		if rising_edge(clk_sys) then
-		   -- using the other phase of ce_vdp permits to please VDPTEST ovr HCounter
-			-- very tight condition; 
-		   if ce_vdp = '0' then
+			if ce_vdp = '1' then
+				xspr_collide_shift(13 downto 1) <= xspr_collide_shift(12 downto 0);
+				if (x<=256) then
+					xspr_collide_shift(0) <= spr_collide;
+				else
+					xspr_collide_shift(0) <= '0';
+				end if;
+				if xspr_collide_shift(13)='1' and
+					display_on='1' and
+					(y<234 or (xmode_M1='0' and xmode_M3='0' and y>=496))
+				then
+					collide_flag <= '1';
+				end if;
+
+				if reset_flags then
+					collide_flag  <= '0';
+					overflow_flag <= '0';
+					line_overflow <= '1'; -- Spr over many lines
+				end if;
+
+			-- using the other phase of ce_vdp permits to please VDPTEST ovr HCounter
+			-- very tight condition;
+			else if ce_vdp = '0' then
 				if  (x<256 or x>485) and (y<234 or y>=496) then
 					if spr_overflow='1' and line_overflow='0' then
 						overflow_flag <= '1';
 						line_overflow <= '1';
 					end if ;
-				else	
-					line_overflow <= '0' ;
+				else
+					line_overflow <= '0';
 				end if;
 			end if ;
-			
-			if ce_vdp = '1' then
-				xspr_collide_shift(13 downto 1) <= xspr_collide_shift(12 downto 0) ;
-				if (x<=256) then
-					xspr_collide_shift(0) <= spr_collide ;
-				else
-					xspr_collide_shift(0) <= '0' ;
-				end if;
-				if xspr_collide_shift(13)='1'  and 
-					display_on='1' and
-					(y<234 or (xmode_M1='0' and xmode_M3='0' and y>=496)) 
-				then
-					collide_flag <= '1' ;
-				end if;
 
-				if reset_flags then
-					collide_flag <= '0' ;
-					overflow_flag <= '0';
-					line_overflow <= '1'; -- Spr over many lines   
-				end if;
-
-				if ((vbl_irq='1' and irq_frame_en='1') or (hbl_irq='1' and irq_line_en='1'))
-					and not reset_flags then
+			if ((vbl_irq='1' and irq_frame_en='1') or
+				(hbl_irq='1' and irq_line_en='1')) and
+				not reset_flags then
 					if irq_delay = "000" then
 						IRQ_n <= '0';
 					else
@@ -443,9 +444,9 @@ begin
 					IRQ_n <= '1';
 					irq_delay <= "111";
 				end if;
-
 			end if;
+
 		end if;
 	end process;
-	
+
 end Behavioral;

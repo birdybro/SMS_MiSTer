@@ -507,6 +507,9 @@ reg  rom_wr = 0;
 wire sd_wrack;
 reg  [23:0] romwr_a;
 reg  ysj_quirk = 0;
+reg  fm_quirk  = 0;
+wire fm_ena;
+assign fm_ena = ~status[12] | gg;
 
 always @(posedge clk_sys) begin
 	reg [31:0] cart_id;
@@ -521,7 +524,8 @@ always @(posedge clk_sys) begin
 		if(ioctl_addr == 'h7ffe) cart_id[15:08] <= ioctl_dout[7:0];
 		if(ioctl_addr == 'h7fff) cart_id[07:00] <= ioctl_dout[7:0];
 		if(ioctl_addr == 'h8000) begin
-			if(cart_id == 32'h13_70_01_4F) ysj_quirk <= 1; // Ys (Japan) Graphics Fix, forces VDP Version 1
+			     if(cart_id == 32'h13_70_01_4F) ysj_quirk <= 1; // Ys (Japan) Graphics Fix, forces VDP Version 1
+			else if(cart_id == 32'h70_20_00_40) fm_quirk  <= 1; // Walter Payton Football - Game won't work w/o FM disabled
 		end
 	end
 end
@@ -713,7 +717,7 @@ system #(63) system
 	.vdp_enables(dbg_menu ? status[34:33] : 2'b00),
 	.psg_enables(dbg_menu ? status[36:35] : 2'b00),
 
-	.fm_ena(~status[12] | gg),
+	.fm_ena(fm_quirk ? 0 : fm_ena),
 	.audioL(audio_l),
 	.audioR(audio_r),
 

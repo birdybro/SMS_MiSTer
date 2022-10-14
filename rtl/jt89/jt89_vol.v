@@ -16,10 +16,10 @@
     Author: Jose Tejada Gomez. Twitter: @topapate
     Version: 1.0
     Date: December, 1st 2018
-    
+
     This work was originally based in the implementation found on the
     SMS core of MiST
-    
+
     */
 
 module jt89_vol(
@@ -28,7 +28,7 @@ module jt89_vol(
     input         rst,
     input         din,
     input  [3:0]  vol,
-    output reg signed [8:0]  snd   
+    output reg signed [8:0]  snd
 );
 
 

@@ -16,10 +16,10 @@
     Author: Jose Tejada Gomez. Twitter: @topapate
     Version: 1.0
     Date: March, 8th 2017
-    
+
     This work was originally based in the implementation found on the
     SMS core of MiST
-    
+
     */
 
 module jt89_tone(
@@ -31,6 +31,8 @@ module jt89_tone(
     output        [8:0] snd,
     output reg          out
 );
+
+parameter DEAF_TONE = 5; // The DAC will not react to tones this fast
 
 reg [9:0] cnt;
 reg last_out;
@@ -44,15 +46,15 @@ jt89_vol u_vol(
     .snd    ( snd     )
 );
 
-always @(posedge clk) 
+always @(posedge clk)
     if( rst ) begin
         cnt <= 10'd0;
         out <= 1'b0;
     end else if( clk_en ) begin
-        if( tone < 6 )    // special case. This is used for sample playing.
+        if( tone <= DEAF_TONE ) // This is used for sample playing
             out <= 1'b1;
         else begin
-            if( cnt[9:0]==10'd1 ) begin 
+            if( cnt[9:0]==10'd1 ) begin
                 cnt[9:0] <= (tone==10'd0) ? 10'd1 : tone;
                 out <= ~out;
             end

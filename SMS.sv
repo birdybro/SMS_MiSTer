@@ -324,24 +324,18 @@ parameter CONF_STR = {
 ////////////////////   CLOCKS   ///////////////////
 
 wire locked;
-wire clk_sdram;
+wire clk_sdram, clk_sys;
 
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
 	.outclk_0(clk_sdram),
+	.outclk_1(clk_sys),
 	.reconfig_to_pll(reconfig_to_pll),
 	.reconfig_from_pll(reconfig_from_pll),
 	.locked(locked)
 );
-
-reg clk_sys;
-always_ff @(posedge clk_sdram) begin
-	reg div;
-	div <= div + 1'd1;
-	clk_sys <= !div;
-end
 
 wire [63:0] reconfig_to_pll;
 wire [63:0] reconfig_from_pll;

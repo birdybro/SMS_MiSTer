@@ -324,17 +324,24 @@ parameter CONF_STR = {
 ////////////////////   CLOCKS   ///////////////////
 
 wire locked;
-wire clk_sys;
+wire clk_sdram;
 
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
-	.outclk_0(clk_sys),
+	.outclk_0(clk_sdram),
 	.reconfig_to_pll(reconfig_to_pll),
 	.reconfig_from_pll(reconfig_from_pll),
 	.locked(locked)
 );
+
+reg clk_sys;
+always_ff @(posedge clk_sdram) begin
+	reg div;
+	div <= div + 1'd1;
+	clk_sys <= !div;
+end
 
 wire [63:0] reconfig_to_pll;
 wire [63:0] reconfig_from_pll;
@@ -430,7 +437,7 @@ wire [24:0] ps2_mouse;
 
 hps_io #(.CONF_STR(CONF_STR), .WIDE(0)) hps_io
 (
-	.clk_sys(clk_sys),
+	.clk_sys(clk_sdram),
 	.HPS_BUS(HPS_BUS),
 
 	.joystick_0(joy_0),
@@ -488,7 +495,7 @@ wire cart_download = ioctl_download & ~code_index & (ioctl_index!=4) & (ioctl_in
 // SYSMODE[1]: [0]=
 reg [7:0] SYSMODE[1];
 reg [7:0] DSW[3];
-always @(posedge clk_sys) begin
+always @(posedge clk_sdram) begin
 	if (ioctl_wr) begin
 		if ((ioctl_index==4  ) && !ioctl_addr[24:1]) SYSMODE[ioctl_addr[0]] <= ioctl_dout;
 		if ((ioctl_index==254) && !ioctl_addr[24:2]) DSW[ioctl_addr[1:0]] <= ioctl_dout;
@@ -500,7 +507,7 @@ sdram ram
 	.*,
 
 	.init(~locked),
-	.clk(clk_sys),
+	.clk(clk_sdram),
 	.clkref(systeme ? ce_pix : turbo ? ce_pix : ce_cpu),
 
 	.waddr(romwr_a),
@@ -529,7 +536,7 @@ sdramclk_ddr
 (
 	.datain_h(1'b0),
 	.datain_l(1'b1),
-	.outclock(clk_sys),
+	.outclock(clk_sdram),
 	.dataout(SDRAM_CLK),
 	.aclr(1'b0),
 	.aset(1'b0),
@@ -544,7 +551,7 @@ wire sd_wrack;
 reg  [23:0] romwr_a;
 reg  ysj_quirk = 0;
 
-always @(posedge clk_sys) begin
+always @(posedge clk_sdram) begin
 	reg [31:0] cart_id;
 	reg old_download;
 	old_download <= cart_download;
@@ -562,7 +569,7 @@ always @(posedge clk_sys) begin
 	end
 end
 
-always @(posedge clk_sys) begin
+always @(posedge clk_sdram) begin
 	reg old_download, old_reset;
 
 	old_download <= cart_download;
@@ -593,7 +600,7 @@ wire gg_avail;
 // Integer values are in BIG endian byte order, so it up to the loader
 // or generator of the code to re-arrange them correctly.
 
-always_ff @(posedge clk_sys) begin
+always_ff @(posedge clk_sdram) begin
 	gg_code[128] <= 1'b0;
 
 	if (code_download & ioctl_wr) begin
@@ -623,7 +630,7 @@ end
 
 
 reg dbr = 0;
-always @(posedge clk_sys) begin
+always @(posedge clk_sdram) begin
 	if(cart_download || bk_loading) dbr <= 1;
 end
 
@@ -633,7 +640,7 @@ reg        palettemode = 0;
 reg [21:0] cart_mask, cart_mask512;
 reg        cart_sz512;
 
-always @(posedge clk_sys) begin
+always @(posedge clk_sdram) begin
 	reg old_download;
 	old_download <= cart_download;
 
@@ -770,7 +777,7 @@ system #(63) system
 	.key_a(key_a),
 	.key_d(key_d),
 
-	.ROMCL(clk_sys),
+	.ROMCL(clk_sdram),
 	.ROMAD(ioctl_addr),
 	.ROMDT(ioctl_dout),
 	.ROMEN(ioctl_wr & ioctl_index==0)
@@ -786,7 +793,7 @@ assign encrypt_a = (ioctl_download && encrypt_range) ? ioctl_addr[12:0] : key_a;
 
 spram #(.widthad_a(13)) encrypt_key
 (
-	.clock(clk_sys),
+	.clock(clk_sdram),
 	.wren(ioctl_wr && encrypt_range),
 	.data(ioctl_dout),
 	.address(encrypt_a),
@@ -892,7 +899,7 @@ end
 
 spram #(.widthad_a(14)) ram_inst
 (
-	.clock     (clk_sys),
+	.clock     (clk_sdram),
 	.address   (systeme ? ram_a : {1'b0,ram_a[12:0]}),
 	.wren      (ram_we),
 	.data      (ram_d),

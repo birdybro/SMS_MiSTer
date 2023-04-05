@@ -106,7 +106,7 @@ always_ff @(posedge clk) begin
                         2'b10 : data_out <= memory[address[awidth:0]];          // READ
                         2'b01 : memory[address[awidth:0]] <= data_in[dwidth:0]; // WRITE
                         2'b11 : memory[address[awidth:0]] <= '1;                // ERASE (set all to 1)
-                     // 2'b00 : memory[address[awidth:0]] <= '1;                // ERAL  (no voltage control so... same??)
+                        2'b00 : memory <= '1;                                   // ERAL
                      // EWEN and EWDS may not be required to simulate here as they are covered by state machine above??
                     endcase
                     state <= IDLE;

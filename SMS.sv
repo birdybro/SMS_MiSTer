@@ -263,60 +263,80 @@ parameter CONF_STR = {
 	"DIP;",
 	"-;",
 	"C,Cheats;",
-	"H1OO,Cheats Enabled,ON,OFF;",
+	"H1O[24],Cheats Enabled,ON,OFF;",
 	"-;",
-	"H8OP,Autosave,OFF,ON;",
-	"H8H9D0R6,Load Backup RAM;",
-	"H8H9D0R7,Save Backup RAM;",
+	"H8O[25],Autosave,OFF,ON;",
+	"H8H9D0R[6],Load Backup RAM;",
+	"H8H9D0R[7],Save Backup RAM;",
 	"H8-;",
 
-	"H8OA,Region,US/EU,Japan;",
-	"H8OB,BIOS,Enable,Disable;",
-	"H8OF,Disable Mapper,No,Yes;",
-	"H8o8,Z80 Speed,Normal,Turbo;",
+	"O[55],Savestates to SDCard,On,Off;",
+	"O[56],Autoincrement Slot,Off,On;",
+	"O[58:57],Savestate Slot,1,2,3,4;",
+	"R[59],Save state (Alt-F1);",
+	"R[60],Restore state (F1);",
+
+	"H8O[10],Region,US/EU,Japan;",
+	"H8O[11],BIOS,Enable,Disable;",
+	"H8O[15],Disable Mapper,No,Yes;",
+	"H8O[40],Z80 Speed,Normal,Turbo;",
 	"H8-;",
-	"H7o12,VDPs,Both,2,1,None;",
-	"H7o34,PSGs,Both,2,1,None;",
+	"H7O[33:32],VDPs,Both,2,1,None;",
+	"H7O[35:34],PSGs,Both,2,1,None;",
 	"H7-;",
 
 	"P1,Audio & Video;",
 	"P1-;",
-	"P1O2,TV System,NTSC,PAL;",
-	"h8P1o9,Orientation,Horz,Vert;",
-	"h8P1oA,Flip Screen,Off,On;",
+	"P1O[2],TV System,NTSC,PAL;",
+	"h8P1O[41],Orientation,Horz,Vert;",
+	"h8P1O[42],Flip Screen,Off,On;",
 	"P1-;",
-	"P1OQR,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-	"P1O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
-	"d6P1oI,Vertical Crop,Disabled,216p(5x);",
-	"d6P1oJM,Crop Offset,0,2,4,8,10,12,-12,-10,-8,-6,-4,-2;",
-	"P1OUV,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
+	"P1O[27:26],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
+	"P1O[5:3],Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
+	"d6P1O[50],Vertical Crop,Disabled,216p(5x);",
+	"d6P1O[54:51],Crop Offset,0,2,4,8,10,12,-12,-10,-8,-6,-4,-2;",
+	"P1O[31:30],Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	"P1-;",
-	"D2P1OD,Border,No,Yes;",
-	"P1OST,Masked Left Column,BG,Black,Cut;",
-	"P1O8,Sprites Per Line,Standard,All;",
-	"d2P1o7,Game Gear Res.,Standard,Extended;",
+	"D2P1O[13],Border,No,Yes;",
+	"P1O[29:28],Masked Left Column,BG,Black,Cut;",
+	"P1O[8],Sprites Per Line,Standard,All;",
+	"d2P1O[39],Game Gear Res.,Standard,Extended;",
 	"P1-;",
-	"P1OC,SMS FM Sound,Enable,Disable;",
+	"P1O[12],SMS FM Sound,Enable,Disable;",
 
 	"P2,Input;",
 	"P2-;",
-	"P2O1,Swap Joysticks,No,Yes;",
-	"P2OE,Multitap,Disabled,Port1;",
-	"P2OG,SNAC,Off,On;",
-	"D3P2OH,Pause Btn Combo,No,Yes;",
+	"P2O[1],Swap Joysticks,No,Yes;",
+	"P2O[14],Multitap,Disabled,Port1;",
+	"P2O[16],SNAC,Off,On;",
+	"D3P2O[17],Pause Btn Combo,No,Yes;",
 	"P2-;",
-	"D2P2OIJ,Gun Control,Disabled,Joy1,Joy2,Mouse;",
-	"D4P2OK,Gun Fire,Joy,Mouse;",
-	"D4P2OL,Gun Port,Port1,Port2;",
-	"D4P2OMN,Cross,Small,Medium,Big,None;",
+	"D2P2O[19:18],Gun Control,Disabled,Joy1,Joy2,Mouse;",
+	"D4P2O[20],Gun Fire,Joy,Mouse;",
+	"D4P2O[21],Gun Port,Port1,Port2;",
+	"D4P2O[23:22],Cross,Small,Medium,Big,None;",
 	"P2-;",
-	"P2o56,Paddle Control,Disabled,Paddle,Joy;",
+	"P2O[38:37],Paddle Control,Disabled,Paddle,Joy;",
 
 	"-;",
 	"R0,Reset;",
-	"J1,Fire 1,Fire 2,Pause,Coin,Arcade 3;",
-	"jn,A|P,B,Start,Coin,X;",
-	"jp,Y|P,A,Start,Coin,X;",
+	"J1,Fire 1,Fire 2,Pause,Coin,Arcade 3,Start,Savestates,Fastforward,Pause(Core),Toggle Dualshock;",
+	"jn,A|P,B,Start,Select,X,L;",
+	"jp,Y|P,A,Start,Select,X,L;",
+	"I,",
+	"Load=DPAD Up|Save=Down|Slot=L+R,",
+	"Active Slot 1,",
+	"Active Slot 2,",
+	"Active Slot 3,",
+	"Active Slot 4,",
+	"Save to state 1,",
+	"Restore state 1,",
+	"Save to state 2,",
+	"Restore state 2,",
+	"Save to state 3,",
+	"Restore state 3,",
+	"Save to state 4,",
+	"Restore state 4,",
 	"V,v",`BUILD_DATE
 };
 
@@ -433,7 +453,7 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(0)) hps_io
 	.clk_sys(clk_sys),
 	.HPS_BUS(HPS_BUS),
 
-	.joystick_0(joy_0),
+	.joystick_0(joy0_unmod),
 	.joystick_1(joy_1),
 	.joystick_2(joy_2),
 	.joystick_3(joy_3),
@@ -475,6 +495,8 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(0)) hps_io
 
 	.ps2_mouse(ps2_mouse)
 );
+
+assign joy_0 = joy0_unmod[10] ? 16'b0 : joy0_unmod;
 
 wire [21:0] ram_addr;
 wire  [7:0] ram_dout;
@@ -699,8 +721,8 @@ system #(63) system
 	.j1_tl(joya[4]),
 	.j1_tr(joya[5]),
 	.j1_th(joya_th),
-	.j1_start(swap ? joy_1[11] : joy_0[11]),
-	.j1_coin(swap ? joy_1[10] : joy_0[10]),
+	.j1_start(swap ? joy_1[9] : joy_0[9]),
+	.j1_coin(swap ? joy_1[7] : joy_0[7]),
 	.j1_a3(swap ? joy_1[8] : joy_0[8]),
 
 	.j2_up(joyb[3]),
@@ -711,8 +733,8 @@ system #(63) system
 	.j2_tr(joyb[5]),
 	.j2_th(joyb_th),
 	.pause(joya[6]&joyb[6]),
-	.j2_start(swap ? joy_0[11] : joy_1[11]),
-	.j2_coin(swap ? joy_0[10] : joy_1[10]),
+	.j2_start(swap ? joy_0[9] : joy_1[9]),
+	.j2_coin(swap ? joy_0[7] : joy_1[7]),
 	.j2_a3(swap ? joy_0[8] : joy_1[8]),
 
 	.j1_tr_out(joya_tr_out),
@@ -1003,7 +1025,7 @@ video_mixer #(.HALF_DEPTH(1), .LINE_LENGTH(300), .GAMMA(1)) video_mixer
 );
 
 
-/////////////////////////  STATE SAVE/LOAD  /////////////////////////////
+/////////////////////////  SAVE/LOAD BACKUP RAM /////////////////////////////
 wire bk_save_write = nvram_we;
 reg bk_pending;
 
@@ -1031,10 +1053,12 @@ dpram #(.widthad_a(15)) nvram_inst
 wire downloading = cart_download;
 reg old_downloading = 0;
 reg bk_ena = 0;
+reg cart_loaded = 0;
 always @(posedge clk_sys) begin
 
 	old_downloading <= downloading;
 	if(~old_downloading & downloading) bk_ena <= 0;
+	if(old_downloading & ~cart_download) cart_loaded <= 1;
 
 	//Save file always mounted in the end of downloading state.
 	if(downloading && img_mounted && !img_readonly) bk_ena <= 1;
@@ -1083,7 +1107,7 @@ always @(posedge clk_sys) begin
 			sd_lba <= 0;
 			sd_rd <= 1;
 			sd_wr <= 0;
-		end 
+		end
 	end else begin
 		if(old_ack & ~sd_ack) begin
 			if(&sd_lba[5:0]) begin
@@ -1097,6 +1121,39 @@ always @(posedge clk_sys) begin
 		end
 	end
 end
+
+///////////////////////////  SAVESTATE  /////////////////////////////////
+
+wire [1:0] ss_slot;
+wire [7:0] ss_info;
+wire ss_save, ss_load, ss_info_req;
+wire statusUpdate;
+
+savestate_ui savestate_ui
+(
+	.clk            (clk_sys       ),
+	.ps2_key        (ps2_key[10:0] ),
+	.allow_ss       (cart_loaded   ),
+	.joySS          (joy_unmod[10] ),
+	.joyRight       (joy_unmod[0]  ),
+	.joyLeft        (joy_unmod[1]  ),
+	.joyDown        (joy_unmod[2]  ),
+	.joyUp          (joy_unmod[3]  ),
+	.joyRewind      (0             ),
+	.rewindEnable   (0             ),
+	.status_slot    (status[58:57] ),
+	.autoincslot    (status[56]    ),
+	.OSD_saveload   (status[60:59] ),
+	.ss_save        (ss_save       ),
+	.ss_load        (ss_load       ),
+	.ss_info_req    (ss_info_req   ),
+	.ss_info        (ss_info       ),
+	.statusUpdate   (statusUpdate  ),
+	.selected_slot  (ss_slot       )
+);
+defparam savestate_ui.INFO_TIMEOUT_BITS = 25;
+
+/////////////////////////////////////////////////////////////////////////
 
 wire [1:0] gun_mode = status[19:18];
 wire       gun_btn_mode = status[20];

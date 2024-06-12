@@ -3,114 +3,115 @@ module vdp
     parameter MAX_SPPL = 7
   )
   (
-    input  wire        clk_sys,
-    input  wire        ce_vdp,
-    input  wire        ce_pix,
-    input  wire        ce_sp,
-    input  wire        gg,
-    input  wire        ggres,
-    input  wire        se_bank,
-    input  wire        sp64,
-    input  wire        HL,
-    input  wire        RD_n,
-    input  wire        WR_n,
-    output reg         IRQ_n,
-    input  wire        WR_direct,
-    input  wire [13:8] A_direct,
-    input  wire [7:0]  A,
-    input  wire [7:0]  D_in,
-    output reg  [7:0]  D_out,
-    input  wire [8:0]  x,
-    input  wire [8:0]  y,
-    output reg  [11:0] color,
-    input  wire        palettemode,
-    output reg         y1,
-    output reg         mask_column,
-    input  wire        black_column,
-    output reg         smode_M1,
-    output reg         smode_M2,
-    output reg         smode_M3,
-    output reg         smode_M4,
-    input  wire        ysj_quirk,
-    input  wire        reset_n
+    input  logic        clk_sys,
+    input  logic        ce_vdp,
+    input  logic        ce_pix,
+    input  logic        ce_sp,
+    input  logic        gg,
+    input  logic        ggres,
+    input  logic        se_bank,
+    input  logic        sp64,
+    input  logic        HL,
+    input  logic        RD_n,
+    input  logic        WR_n,
+    output logic         IRQ_n,
+    input  logic        WR_direct,
+    input  logic [13:8] A_direct,
+    input  logic [7:0]  A,
+    input  logic [7:0]  D_in,
+    output logic  [7:0]  D_out,
+    input  logic [8:0]  x,
+    input  logic [8:0]  y,
+    output logic [11:0] color,
+    input  logic        palettemode,
+    output logic        y1,
+    output logic        mask_column,
+    input  logic        black_column,
+    output logic         smode_M1,
+    output logic         smode_M2,
+    output logic         smode_M3,
+    output logic         smode_M4,
+    input  logic        ysj_quirk,
+    input  logic        reset_n
   );
 
   // Internal signals
-  reg         old_RD_n;
-  reg         old_WR_n;
-  reg         old_HL;
-  reg         old_WR_direct;
+  logic         old_RD_n;
+  logic         old_WR_n;
+  logic         old_HL;
+  logic         old_WR_direct;
 
   // Helper bits
-  reg         data_write;
-  reg         address_ff = 1'b0;
-  reg         to_cram = 1'b0;
-  reg         spr_collide;
-  reg         spr_overflow;
+  logic         data_write;
+  logic         reset_set;
+  logic         address_ff = 1'b0;
+  logic         to_cram = 1'b0;
+  logic        spr_collide;
+  logic        spr_overflow;
 
   // VRAM and CRAM lines for the CPU interface
-  reg  [14:0] vram_cpu_A;
-  reg  [13:0] xram_cpu_A;
-  reg         vram_cpu_WE;
-  reg         cram_cpu_WE;
-  reg  [7:0]  vram_cpu_D_out; 
-  reg  [7:0]  vram_cpu_D_outl;
-  reg         xram_cpu_A_incr = 1'b0;
-  reg         xram_cpu_read = 1'b0;
+  logic  [14:0] vram_cpu_A;
+  logic  [13:0] xram_cpu_A;
+  logic         vram_cpu_WE;
+  logic         cram_cpu_WE;
+  logic  [7:0]  vram_cpu_D_out; 
+  logic  [7:0]  vram_cpu_D_outl;
+  logic         xram_cpu_A_incr = 1'b0;
+  logic         xram_cpu_read = 1'b0;
 
   // VRAM and CRAM lines for the video interface
-  reg  [13:0] vram_vdp_A;
-  reg  [7:0]  vram_vdp_D; 
-  reg  [4:0]  cram_vdp_A;
-  reg  [11:0] cram_vdp_D;
-  reg  [4:0]  cram_vdp_A_in;
-  reg  [11:0] cram_vdp_D_in;
+  logic  [13:0] vram_vdp_A;
+  logic  [7:0]  vram_vdp_D; 
+  logic  [4:0]  cram_vdp_A;
+  logic  [11:0] cram_vdp_D;
+  logic  [4:0]  cram_vdp_A_in;
+  logic  [11:0] cram_vdp_D_in;
 
   // Control bits
-  reg         display_on = 1'b1;
-  reg         disable_hscroll = 1'b0;
-  reg         disable_vscroll = 1'b0;
-  reg         mask_column0 = 1'b0;
-  reg  [3:0]  overscan = 4'b0000;
-  reg         irq_frame_en = 1'b0;
-  reg         irq_line_en = 1'b0;
-  reg  [7:0]  irq_line_count = 8'hFF;
-  reg  [3:0]  bg_address = 4'b0000;
-  reg  [2:0]  m2mg_address = 3'b000;
-  reg  [7:0]  m2ct_address = 8'hFF;
-  reg  [7:0]  bg_scroll_x = 8'h00;
-  reg  [7:0]  bg_scroll_y = 8'h00;
-  reg  [6:0]  spr_address = 7'b0000000;
-  reg         spr_shift = 1'b0;
-  reg         spr_tall = 1'b0;
-  reg         spr_wide = 1'b0;
-  reg  [2:0]  spr_high_bits = 3'b000;
+  logic         display_on = 1'b1;
+  logic         disable_hscroll = 1'b0;
+  logic         disable_vscroll = 1'b0;
+  logic         mask_column0 = 1'b0;
+  logic  [3:0]  overscan = 4'b0000;
+  logic         irq_frame_en = 1'b0;
+  logic         irq_line_en = 1'b0;
+  logic  [7:0]  irq_line_count = 8'hFF;
+  logic  [3:0]  bg_address = 4'b0000;
+  logic  [2:0]  m2mg_address = 3'b000;
+  logic  [7:0]  m2ct_address = 8'hFF;
+  logic  [7:0]  bg_scroll_x = 8'h00;
+  logic  [7:0]  bg_scroll_y = 8'h00;
+  logic  [6:0]  spr_address = 7'b0000000;
+  logic         spr_shift = 1'b0;
+  logic         spr_tall = 1'b0;
+  logic         spr_wide = 1'b0;
+  logic  [2:0]  spr_high_bits = 3'b000;
 
   // Various counters
-  reg         last_x0 = 1'b0;
-  reg         reset_flags;
-  reg  [2:0]  irq_delay = 3'b111;
-  reg         collide_flag = 1'b0;
-  reg         collide_buf = 1'b0;
-  reg  [13:0] xspr_collide_shift = 14'h0000;
-  reg         overflow_flag = 1'b0;
-  reg         line_overflow = 1'b0;
-  reg  [7:0]  hbl_counter = 8'h00;
-  reg         vbl_irq;
-  reg         hbl_irq;
-  reg  [7:0]  latched_x;
+  logic         last_x0 = 1'b0;
+  logic         reset_flags;
+  logic  [2:0]  irq_delay = 3'b111;
+  logic         collide_flag = 1'b0;
+  logic         collide_buf = 1'b0;
+  logic  [13:0] xspr_collide_shift = 14'h0000;
+  logic         overflow_flag = 1'b0;
+  logic         line_overflow = 1'b0;
+  logic  [7:0]  hbl_counter = 8'h00;
+  logic         vbl_irq;
+  logic         hbl_irq;
+  logic  [7:0]  latched_x;
 
-  reg  [7:0]  cram_latch;
-  reg         mode_M1;
-  reg         mode_M2;
-  reg         mode_M3;
-  reg         mode_M4;
-  reg         xmode_M1;
-  reg         xmode_M3;
-  reg         xmode_M4;
+  logic  [7:0]  cram_latch;
+  logic         mode_M1;
+  logic         mode_M2;
+  logic         mode_M3;
+  logic         mode_M4;
+  logic        xmode_M1;
+  logic        xmode_M3;
+  logic        xmode_M4;
 
   // Assignments
-  always @(posedge clk_sys or negedge reset_n) begin
+  always_ff @(posedge clk_sys) begin
     if (!reset_n) begin
       disable_hscroll <= 1'b0;
       disable_vscroll <= 1'b0;
@@ -135,9 +136,9 @@ module vdp
       mode_M2         <= 1'b0;
       mode_M3         <= 1'b0;
       mode_M4         <= 1'b1;
-    end else if (posedge clk_sys) begin
+    end else begin
       data_write <= 1'b0;
-      reset_set := 1'b0;
+      reset_set <= 1'b0;
 
       old_HL <= HL;
       if (old_HL == 1'b0 && HL == 1'b1) begin
@@ -218,7 +219,7 @@ module vdp
               D_out[5] <= collide_flag;
               D_out[4:0] <= 5'b11111;
               reset_flags <= 1'b1;
-              reset_set := 1'b1;
+              reset_set <= 1'b1;
             end
           endcase
         end else if (xram_cpu_A_incr == 1'b1) begin
@@ -238,7 +239,7 @@ module vdp
     end
   end
 
-  always @(posedge clk_sys) begin
+  always_ff @(posedge clk_sys) begin
     if (ce_vdp == 1'b1) begin
       if (x == 485 && ((y == 224 && xmode_M1 == 1'b1) || (y == 240 && xmode_M3 == 1'b1) || (y == 192 && xmode_M1 == 1'b0 && xmode_M3 == 1'b0)) && !(last_x0 == x[0])) begin
         vbl_irq <= 1'b1;
@@ -248,7 +249,7 @@ module vdp
     end
   end
 
-  always @(posedge clk_sys) begin
+  always_ff @(posedge clk_sys) begin
     if (ce_vdp == 1'b1) begin
       last_x0 <= x[0];
       if (x == 486 && !(last_x0 == x[0])) begin
@@ -268,7 +269,7 @@ module vdp
     end
   end
 
-  always @(posedge clk_sys) begin
+  always_ff @(posedge clk_sys) begin
     if (ce_vdp == 1'b0) begin
       if ((x < 256 || x > 485) && (y < 234 || y >= 496)) begin
         if (spr_overflow == 1'b1 && line_overflow == 1'b0) begin
@@ -376,6 +377,7 @@ module vdp
   vdp_cram vdp_cram_inst
   (
     .cpu_clk(clk_sys),
+    .reset_n(reset_n),
     .cpu_WE(cram_cpu_WE),
     .cpu_A(cram_vdp_A_in),
     .cpu_D(cram_vdp_D_in),
@@ -384,7 +386,7 @@ module vdp
     .vdp_D(cram_vdp_D)
   );
 
-  always @* begin
+  always_comb begin
     cram_vdp_A_in = (gg == 1'b0) ? xram_cpu_A[4:0] : xram_cpu_A[5:1];
     cram_vdp_D_in = (gg == 1'b0) ? {D_in[5:4], D_in[5:4], D_in[3:2], D_in[3:2], D_in[1:0], D_in[1:0]} : {D_in[3:0], cram_latch};
     cram_cpu_WE = (data_write && to_cram && ((gg == 1'b0) || (xram_cpu_A[0] == 1'b1)) && (WR_direct == 1'b0)) ? 1'b1 : 1'b0;
@@ -392,8 +394,11 @@ module vdp
     vram_cpu_A = (WR_direct == 1'b1) ? {~se_bank, A_direct, A} : {se_bank, xram_cpu_A};
   end
 
-  assign smode_M1 = mode_M1 & mode_M2;
-  assign smode_M2 = mode_M2;
-  assign smode_M3 = mode_M3 & mode_M2;
-  assign smode_M4 = mode_M4;
+  always_ff @(posedge clk_sys) begin
+    smode_M1 <= mode_M1 & mode_M2;
+    smode_M2 <= mode_M2;
+    smode_M3 <= mode_M3 & mode_M2;
+    smode_M4 <= mode_M4;
+  end
+
 endmodule

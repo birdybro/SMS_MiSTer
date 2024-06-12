@@ -1,68 +1,68 @@
 module io (
-    input  wire         clk,
-    input  wire         WR_n,
-    input  wire         RD_n,
-    input  wire [7:0]   A,
-    input  wire [7:0]   D_in,
-    output reg  [7:0]   D_out,
-    output reg          HL_out,
-    output reg          vdp1_bank,
-    output reg          vdp2_bank,
-    output reg          vdp_cpu_bank,
-    output reg  [3:0]   rom_bank,
-    output reg          J1_tr_out,
-    output reg          J1_th_out,
-    output reg          J2_tr_out,
-    output reg          J2_th_out,
-    input  wire         J1_up,
-    input  wire         J1_down,
-    input  wire         J1_left,
-    input  wire         J1_right,
-    input  wire         J1_tl,
-    input  wire         J1_tr,
-    input  wire         J1_th,
-    input  wire         j1_start,
-    input  wire         j1_coin,
-    input  wire         j1_a3,
-    input  wire         J2_up,
-    input  wire         J2_down,
-    input  wire         J2_left,
-    input  wire         J2_right,
-    input  wire         J2_tl,
-    input  wire         J2_tr,
-    input  wire         J2_th,
-    input  wire         j2_start,
-    input  wire         j2_coin,
-    input  wire         j2_a3,
-    input  wire         Pause,
-    input  wire [1:0]   E0Type,
-    input  wire         E1Use,
-    input  wire         E2Use,
-    input  wire [7:0]   E0,
-    input  wire [7:0]   F2,
-    input  wire [7:0]   F3,
-    input  wire         has_paddle,
-    input  wire         has_pedal,
-    input  wire [7:0]   paddle,
-    input  wire [7:0]   paddle2,
-    input  wire [7:0]   pedal,
-    input  wire         pal,
-    input  wire         gg,
-    input  wire         systeme,
-    input  wire         region,
-    input  wire         RESET_n
+    input  logic         clk,
+    input  logic         WR_n,
+    input  logic         RD_n,
+    input  logic [7:0]   A,
+    input  logic [7:0]   D_in,
+    output logic  [7:0]   D_out,
+    output logic          HL_out,
+    output logic          vdp1_bank,
+    output logic          vdp2_bank,
+    output logic          vdp_cpu_bank,
+    output logic  [3:0]   rom_bank,
+    output logic          J1_tr_out,
+    output logic          J1_th_out,
+    output logic          J2_tr_out,
+    output logic          J2_th_out,
+    input  logic         J1_up,
+    input  logic         J1_down,
+    input  logic         J1_left,
+    input  logic         J1_right,
+    input  logic         J1_tl,
+    input  logic         J1_tr,
+    input  logic         J1_th,
+    input  logic         J1_start,
+    input  logic         J1_coin,
+    input  logic         J1_a3,
+    input  logic         J2_up,
+    input  logic         J2_down,
+    input  logic         J2_left,
+    input  logic         J2_right,
+    input  logic         J2_tl,
+    input  logic         J2_tr,
+    input  logic         J2_th,
+    input  logic         J2_start,
+    input  logic         J2_coin,
+    input  logic         J2_a3,
+    input  logic         Pause,
+    input  logic [1:0]   E0Type,
+    input  logic         E1Use,
+    input  logic         E2Use,
+    input  logic [7:0]   E0,
+    input  logic [7:0]   F2,
+    input  logic [7:0]   F3,
+    input  logic         has_paddle,
+    input  logic         has_pedal,
+    input  logic [7:0]   paddle,
+    input  logic [7:0]   paddle2,
+    input  logic [7:0]   pedal,
+    input  logic         pal,
+    input  logic         gg,
+    input  logic         systeme,
+    input  logic         region,
+    input  logic         RESET_n
 );
 
-    reg [7:0] ctrl = 8'hFF;
-    reg [7:0] gg_ddr = 8'hFF;
-    reg [7:0] gg_txd = 8'h00;
-    reg [7:0] gg_rxd = 8'hFF;
-    reg [7:0] gg_pdr = 8'h00;
-    reg       j1_th_dir = 1'b0;
-    reg       j2_th_dir = 1'b0;
-    reg       analog_select;
-    reg       analog_player;
-    reg       analog_upper;
+    logic [7:0] ctrl = 8'hFF;
+    logic [7:0] gg_ddr = 8'hFF;
+    logic [7:0] gg_txd = 8'h00;
+    logic [7:0] gg_rxd = 8'hFF;
+    logic [7:0] gg_pdr = 8'h00;
+    logic       J1_th_dir = 1'b0;
+    logic       J2_th_dir = 1'b0;
+    logic       analog_select;
+    logic       analog_player;
+    logic       analog_upper;
 
     always @(posedge clk or negedge RESET_n) begin
         if (!RESET_n) begin
@@ -125,13 +125,13 @@ module io (
                     3'b110: D_out <= 8'hFF;
                 endcase
             end else if (systeme && (A == 8'hE0)) begin
-                D_out <= {~j2_start | E0Type[1] | E0Type[0],
-                          ~j1_start | E0Type[1],
+                D_out <= {~J2_start | E0Type[1] | E0Type[0],
+                          ~J1_start | E0Type[1],
                           1'b1,
-                          ~j1_start | ~E0Type[0],
+                          ~J1_start | ~E0Type[0],
                           E0[3:2],
-                          ~j2_coin,
-                          ~j1_coin};
+                          ~J2_coin,
+                          ~J1_coin};
             end else if (systeme && (A == 8'hE1)) begin
                 if (E1Use) begin
                     D_out <= {2'b11, J1_tr, J1_tl, J1_right, J1_left, J1_down, J1_up};
@@ -181,9 +181,9 @@ module io (
         J1_th_out <= ctrl[1] || ctrl[5] || region;
         J2_tr_out <= ctrl[2] || ctrl[6] || region;
         J2_th_out <= ctrl[3] || ctrl[7] || region;
-        HL_out    <= (!j1_th_dir && ctrl[1]) || (ctrl[1] && !J1_th) || (!j2_th_dir && ctrl[3]) || (ctrl[3] && !J2_th);
-        j1_th_dir <= ctrl[1];
-        j2_th_dir <= ctrl[3];
+        HL_out    <= (!J1_th_dir && ctrl[1]) || (ctrl[1] && !J1_th) || (!J2_th_dir && ctrl[3]) || (ctrl[3] && !J2_th);
+        J1_th_dir <= ctrl[1];
+        J2_th_dir <= ctrl[3];
     end
 
 endmodule

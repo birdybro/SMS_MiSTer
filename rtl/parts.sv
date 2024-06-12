@@ -4,7 +4,7 @@ module DLROM #(parameter AW,parameter DW)
 (
 	input							CL0,
 	input [(AW-1):0]			AD0,
-	output reg [(DW-1):0]	DO0,
+	output logic [(DW-1):0]	DO0,
 
 	input							CL1,
 	input [(AW-1):0]			AD1,
@@ -12,10 +12,10 @@ module DLROM #(parameter AW,parameter DW)
 	input							WE1
 );
 
-reg [(DW-1):0] core[0:((2**AW)-1)];
+logic [(DW-1):0] core[0:((2**AW)-1)];
 
-always @(posedge CL0) DO0 <= core[AD0];
-always @(posedge CL1) if (WE1) core[AD1] <= DI1;
+always_ff @(posedge CL0) DO0 <= core[AD0];
+always_ff @(posedge CL1) if (WE1) core[AD1] <= DI1;
 
 endmodule
 
@@ -32,10 +32,10 @@ input				WR;
 input  [7:0]	IN;
 
 
-reg [7:0] ramcore [0:2047];
-reg [7:0] OUT;
+logic [7:0] ramcore [0:2047];
+logic [7:0] OUT;
 
-always @( posedge CL ) begin
+always_ff @( posedge CL ) begin
 	if (WR) ramcore[ADRS] <= IN;
 	else OUT <= ramcore[ADRS];
 end
@@ -50,14 +50,14 @@ endmodule
 module SRAM_4096(
 	input					clk,
 	input	    [11:0]	adrs,
-	output reg [7:0]	out,
+	output logic [7:0]	out,
 	input					wr,
 	input		  [7:0]	in
 );
 
-reg [7:0] ramcore [0:4095];
+logic [7:0] ramcore [0:4095];
 
-always @( posedge clk ) begin
+always_ff @( posedge clk ) begin
 	if (wr) ramcore[adrs] <= in;
 	else out <= ramcore[adrs];
 end
@@ -78,19 +78,19 @@ module DPRAM2048
 
 	input					clk1,
 	input [10:0]		adr1,
-	output reg [7:0]	dat1,
+	output logic [7:0]	dat1,
 
-	output reg [7:0]	dtr0
+	output logic [7:0]	dtr0
 );
 
-reg [7:0] core [0:2047];
+logic [7:0] core [0:2047];
 
-always @( posedge clk0 ) begin
+always_ff @( posedge clk0 ) begin
 	if (wen0) core[adr0] <= dat0;
 	else dtr0 <= core[adr0];
 end
 
-always @( posedge clk1 ) begin
+always_ff @( posedge clk1 ) begin
 	dat1 <= core[adr1];
 end
 
@@ -106,19 +106,19 @@ module DPRAM1024
 
 	input					clk1,
 	input  [9:0]		adr1,
-	output reg [7:0]	dat1,
+	output logic [7:0]	dat1,
 
-	output reg [7:0]	dtr0
+	output logic [7:0]	dtr0
 );
 
-reg [7:0] core [0:1023];
+logic [7:0] core [0:1023];
 
-always @( posedge clk0 ) begin
+always_ff @( posedge clk0 ) begin
 	if (wen0) core[adr0] <= dat0;
 	else dtr0 <= core[adr0];
 end
 
-always @( posedge clk1 ) begin
+always_ff @( posedge clk1 ) begin
 	dat1 <= core[adr1];
 end
 
@@ -139,8 +139,8 @@ module DPRAM2048_8_16
 	output  [7:0]		dtr0
 );
 
-wire [7:0] do0, do1;
-wire [7:0] doH, doL;
+logic [7:0] do0, do1;
+logic [7:0] doH, doL;
 
 DPRAM1024 core0( clk0, adr0[10:1], dat0, wen0 & (~adr0[0]), clk1, adr1, doL, do0 );
 DPRAM1024 core1( clk0, adr0[10:1], dat0, wen0 &   adr0[0],  clk1, adr1, doH, do1 );
@@ -158,23 +158,23 @@ module VRAMs
 (
 	input					clk0,
 	input       [9:0]	adr0,
-	output reg  [7:0]	dat0,
+	output logic  [7:0]	dat0,
 	input       [7:0]	dtw0,
 	input					wen0,
 
 	input					clk1,
 	input       [9:0]	adr1,
-	output reg  [7:0]	dat1
+	output logic  [7:0]	dat1
 );
 
-reg [7:0] core [0:1023];
+logic [7:0] core [0:1023];
 
-always @( posedge clk0 ) begin
+always_ff @( posedge clk0 ) begin
 	if (wen0) core[adr0] <= dtw0;
 	else dat0 <= core[adr0];
 end
 
-always @( posedge clk1 ) begin
+always_ff @( posedge clk1 ) begin
 	dat1 <= core[adr1];
 end
 
@@ -193,10 +193,10 @@ module VRAM
 	output     [15:0]	dat1
 );
 
-wire even = ~adr0[0];
-wire  odd =  adr0[0];
+logic even = ~adr0[0];
+logic  odd =  adr0[0];
 
-wire [7:0] do00, do01, do10, do11;
+logic [7:0] do00, do01, do10, do11;
 VRAMs ram0( clk0, adr0[10:1], do00, dtw0, wen0 & even, clk1, adr1, do10 );
 VRAMs ram1( clk0, adr0[10:1], do01, dtw0, wen0 &  odd, clk1, adr1, do11 );
 
@@ -214,18 +214,18 @@ module LineBuf
 	input	   			clkr,
 	input	     [9:0]	radr,
 	input	   			clre,
-	output reg [10:0]	rdat,
+	output logic [10:0]	rdat,
 	
 	input	    			clkw,
 	input	      [9:0]	wadr,
 	input	     [10:0]	wdat,
 	input	    			we,
-	output reg [10:0]	rdat1
+	output logic [10:0]	rdat1
 );
 
-reg [10:0] ram[1024];
+logic [10:0] ram[1024];
 
-always @(posedge clkr) begin
+always_ff @(posedge clkr) begin
 	if(clre) begin
 		ram[radr] <= 0;
 		rdat <= 0;
@@ -235,7 +235,7 @@ always @(posedge clkr) begin
 	end
 end
 
-always @(posedge clkw) begin
+always_ff @(posedge clkw) begin
 	if(we) begin
 		ram[wadr] <= wdat;
 		rdat1 <= wdat;
@@ -361,4 +361,3 @@ assign oDATA = iSEL0 ? iDATA0 :
 					dData;
 
 endmodule
-

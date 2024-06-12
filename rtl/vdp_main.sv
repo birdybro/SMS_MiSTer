@@ -1,56 +1,56 @@
 module vdp_main #(
     parameter MAX_SPPL = 7
 )(
-    input wire clk_sys,
-    input wire ce_vdp,
-    input wire ce_pix,
-    input wire ce_sp,
-    input wire ggres,
-    input wire sp64,
-    output wire [13:0] vram_A,
-    input wire [7:0] vram_D,
-    output wire [4:0] cram_A,
-    input wire [11:0] cram_D,
-    input wire [8:0] x,
-    input wire [8:0] y,
-    output reg [11:0] color,
-    input wire palettemode,
-    output reg y1,
-    input wire display_on,
-    input wire mask_column0,
-    input wire black_column,
-    input wire smode_M1,
-    input wire smode_M3,
-    input wire smode_M4,
-    input wire ysj_quirk,
-    input wire [3:0] overscan,
-    input wire [3:0] bg_address,
-    input wire [2:0] m2mg_address,
-    input wire [7:0] m2ct_address,
-    input wire [7:0] bg_scroll_x,
-    input wire [7:0] bg_scroll_y,
-    input wire disable_hscroll,
-    input wire disable_vscroll,
-    input wire [6:0] spr_address,
-    input wire [2:0] spr_high_bits,
-    input wire spr_shift,
-    input wire spr_tall,
-    input wire spr_wide,
-    output wire spr_collide,
-    output wire spr_overflow
+    input logic clk_sys,
+    input logic ce_vdp,
+    input logic ce_pix,
+    input logic ce_sp,
+    input logic ggres,
+    input logic sp64,
+    output logic [13:0] vram_A,
+    input logic [7:0] vram_D,
+    output logic [4:0] cram_A,
+    input logic [11:0] cram_D,
+    input logic [8:0] x,
+    input logic [8:0] y,
+    output logic [11:0] color,
+    input logic palettemode,
+    output logic y1,
+    input logic display_on,
+    input logic mask_column0,
+    input logic black_column,
+    input logic smode_M1,
+    input logic smode_M3,
+    input logic smode_M4,
+    input logic ysj_quirk,
+    input logic [3:0] overscan,
+    input logic [3:0] bg_address,
+    input logic [2:0] m2mg_address,
+    input logic [7:0] m2ct_address,
+    input logic [7:0] bg_scroll_x,
+    input logic [7:0] bg_scroll_y,
+    input logic disable_hscroll,
+    input logic disable_vscroll,
+    input logic [6:0] spr_address,
+    input logic [2:0] spr_high_bits,
+    input logic spr_shift,
+    input logic spr_tall,
+    input logic spr_wide,
+    output logic spr_collide,
+    output logic spr_overflow
 );
 
-reg [7:0] bg_y;
-reg [13:0] bg_vram_A;
-reg [4:0] bg_color;
-reg bg_priority;
-reg [3:0] out_color;
-reg [13:0] spr_vram_A;
-reg [3:0] spr_color;
-reg line_reset;
+logic [7:0] bg_y;
+logic [13:0] bg_vram_A;
+logic [4:0] bg_color;
+logic bg_priority;
+logic [3:0] out_color;
+logic [13:0] spr_vram_A;
+logic [3:0] spr_color;
+logic line_reset;
 
-always @(*) begin
-    reg [8:0] sum;
+always_comb begin
+    logic [8:0] sum;
     if (!disable_vscroll || x + 16 < 200) begin
         sum = y + {1'b0, bg_scroll_y};
         if (!smode_M1 && !smode_M3) begin
@@ -82,7 +82,7 @@ vdp_background vdp_bg_inst (
     .smode_M3(smode_M3),
     .smode_M4(smode_M4),
     .ysj_quirk(ysj_quirk),
-    .priority(bg_priority)
+    .priority_o(bg_priority)
 );
 
 vdp_sprites #(
@@ -110,9 +110,9 @@ vdp_sprites #(
     .color(spr_color)
 );
 
-always @(*) begin
-    reg spr_active;
-    reg bg_active;
+always_comb begin
+    logic spr_active;
+    logic bg_active;
 
     y1 = 1'b1;
 
@@ -154,7 +154,7 @@ end
 
 assign vram_A = (x >= 256 && x < 496) ? spr_vram_A : bg_vram_A;
 
-always @(*) begin
+always_comb begin
     if (black_column && mask_column0 && x > 0 && x < 9) begin
         color = 12'b000000000000;
     end else if (smode_M4) begin

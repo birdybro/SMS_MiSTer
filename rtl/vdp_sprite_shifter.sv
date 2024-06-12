@@ -1,27 +1,27 @@
 module vpd_sprite_shifter (
-    input wire clk_sys,
-    input wire ce_pix,
-    input wire [7:0] x,
-    input wire [7:0] spr_x,
-    input wire load,
-    input wire x248,
-    input wire x224,
-    input wire m4,
-    input wire wide_n,
-    input wire [7:0] spr_d0,
-    input wire [7:0] spr_d1,
-    input wire [7:0] spr_d2,
-    input wire [7:0] spr_d3,
-    output reg [3:0] color,
-    output reg active
+    input logic clk_sys,
+    input logic ce_pix,
+    input logic [7:0] x,
+    input logic [7:0] spr_x,
+    input logic load,
+    input logic x248,
+    input logic x224,
+    input logic m4,
+    input logic wide_n,
+    input logic [7:0] spr_d0,
+    input logic [7:0] spr_d1,
+    input logic [7:0] spr_d2,
+    input logic [7:0] spr_d3,
+    output logic [3:0] color,
+    output logic active
 );
-    reg wideclock = 0;
-    reg [7:0] shift0 = 8'b0;
-    reg [7:0] shift1 = 8'b0;
-    reg [7:0] shift2 = 8'b0;
-    reg [7:0] shift3 = 8'b0;
+    logic wideclock = 0;
+    logic [7:0] shift0 = 8'b0;
+    logic [7:0] shift1 = 8'b0;
+    logic [7:0] shift2 = 8'b0;
+    logic [7:0] shift3 = 8'b0;
 
-    always @(posedge clk_sys) begin
+    always_ff @(posedge clk_sys) begin
         if (ce_pix) begin
             if ((spr_x == x && ((load && (m4 || spr_d3[7] == 0)) || (x224 && spr_d3[7] == 1))) || 
                 (spr_x == x + 8 && x248)) begin
@@ -47,7 +47,7 @@ module vpd_sprite_shifter (
         end
     end
 
-    always @(*) begin
+    always_comb begin
         if (m4) begin
             color <= {shift3[7], shift2[7], shift1[7], shift0[7]};
             active <= shift3[7] || shift2[7] || shift1[7] || shift0[7];

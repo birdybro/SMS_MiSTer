@@ -1,24 +1,24 @@
 module vdp_sprites #(parameter MAX_SPPL = 7) (
-    input wire clk_sys,
-    input wire ce_vdp,
-    input wire ce_pix,
-    input wire ce_sp,
-    input wire sp64,
-    input wire [13:7] table_address,
-    input wire [2:0] char_high_bits,
-    input wire tall,
-    input wire wide,
-    input wire shift,
-    input wire smode_M1,
-    input wire smode_M3,
-    input wire smode_M4,
-    output reg [13:0] vram_A,
-    input wire [7:0] vram_D,
-    input wire [8:0] x,
-    input wire [8:0] y,
-    output reg collide,
-    output reg overflow,
-    output reg [3:0] color
+    input logic clk_sys,
+    input logic ce_vdp,
+    input logic ce_pix,
+    input logic ce_sp,
+    input logic sp64,
+    input logic [13:7] table_address,
+    input logic [2:0] char_high_bits,
+    input logic tall,
+    input logic wide,
+    input logic shift,
+    input logic smode_M1,
+    input logic smode_M3,
+    input logic smode_M4,
+    output logic [13:0] vram_A,
+    input logic [7:0] vram_D,
+    input logic [8:0] x,
+    input logic [8:0] y,
+    output logic collide,
+    output logic overflow,
+    output logic [3:0] color
 );
 
     localparam WAITING = 3'b000;
@@ -30,46 +30,46 @@ module vdp_sprites #(parameter MAX_SPPL = 7) (
     localparam LOAD_2 = 3'b110;
     localparam LOAD_3 = 3'b111;
 
-    reg [2:0] state = WAITING;
-    reg [5:0] count;
-    reg [5:0] index;
-    reg [13:0] data_address;
-    reg ce_spload;
-    reg [7:0] m2_flags;
+    logic [2:0] state = WAITING;
+    logic [5:0] count;
+    logic [5:0] index;
+    logic [13:0] data_address;
+    logic ce_spload;
+    logic [7:0] m2_flags;
 
-    reg enable[MAX_SPPL:0];
-    reg [7:0] spr_x[MAX_SPPL:0];
-    reg [7:0] spr_d0[MAX_SPPL:0];
-    reg [7:0] spr_d1[MAX_SPPL:0];
-    reg [7:0] spr_d2[MAX_SPPL:0];
-    reg [7:0] spr_d3[MAX_SPPL:0];
-    reg [3:0] spr_color[MAX_SPPL:0];
-    reg [MAX_SPPL:0] spr_active;
+    logic enable[MAX_SPPL:0];
+    logic [7:0] spr_x[MAX_SPPL:0];
+    logic [7:0] spr_d0[MAX_SPPL:0];
+    logic [7:0] spr_d1[MAX_SPPL:0];
+    logic [7:0] spr_d2[MAX_SPPL:0];
+    logic [7:0] spr_d3[MAX_SPPL:0];
+    logic [3:0] spr_color[MAX_SPPL:0];
+    logic [MAX_SPPL:0] spr_active;
 
     generate
-        genvar i;
-        for (i = 0; i <= MAX_SPPL; i = i + 1) begin: shifters
+        genvar h;
+        for (h = 0; h <= MAX_SPPL; h = h + 1) begin: shifters
             vpd_sprite_shifter shifter (
                 .clk_sys(clk_sys),
                 .ce_pix(ce_pix),
                 .x(x[7:0]),
-                .spr_x(spr_x[i]),
+                .spr_x(spr_x[h]),
                 .load((shift == 1'b0) && (x < 256)),
                 .x248((shift == 1'b1) && ((x < 248) || (x >= 504)) && (smode_M4 == 1'b1)),
                 .x224((smode_M4 == 1'b0) && ((x < 223) || (x >= 480))),
                 .m4(smode_M4),
                 .wide_n(wide == 1'b0),
-                .spr_d0(spr_d0[i]),
-                .spr_d1(spr_d1[i]),
-                .spr_d2(spr_d2[i]),
-                .spr_d3(spr_d3[i]),
-                .color(spr_color[i]),
-                .active(spr_active[i])
+                .spr_d0(spr_d0[h]),
+                .spr_d1(spr_d1[h]),
+                .spr_d2(spr_d2[h]),
+                .spr_d3(spr_d3[h]),
+                .color(spr_color[h]),
+                .active(spr_active[h])
             );
         end
     endgenerate
 
-    always @(*) begin
+    always_comb begin
         case ({smode_M4, state})
             {1'b0, COMPARE}: vram_A = {table_address, index[4:0], 2'b00};
             {1'b0, LOAD_N}:  vram_A = {table_address, index[4:0], 2'b10};
@@ -90,15 +90,18 @@ module vdp_sprites #(parameter MAX_SPPL = 7) (
 
     assign ce_spload = (MAX_SPPL < 8 || sp64 == 1'b0) ? ce_vdp : ce_sp;
 
-    always @(posedge clk_sys) begin
-        reg [8:0] y9;
-        reg [8:0] d9;
-        reg [8:0] delta;
+    integer i;
+    always_ff @(posedge clk_sys) begin
+        logic [8:0] y9;
+        logic [8:0] d9;
+        logic [8:0] delta;
 
         if (ce_spload == 1'b1) begin
             if (x == 257) begin
                 count <= 0;
-                enable <= 0;
+                for (i = 0; i <= MAX_SPPL; i = i + 1) begin
+                    enable[i] <= 0;
+                end
                 state <= COMPARE;
                 index <= 0;
                 overflow <= 0;
@@ -203,19 +206,20 @@ module vdp_sprites #(parameter MAX_SPPL = 7) (
         end
     end
 
-    always @(posedge clk_sys) begin
-        reg [7:0] collision;
+    integer j, k;
+    always_ff @(posedge clk_sys) begin
+        logic [7:0] collision;
 
         if (ce_pix == 1'b1) begin
             color <= 4'b0;
             collision = 8'b0;
-            for (integer i = MAX_SPPL; i >= 8; i = i - 1) begin
-                if (enable[i] && spr_active[i] == 1'b1) color <= spr_color[i];
+            for (j = MAX_SPPL; j >= 8; j = j - 1) begin
+                if (enable[j] && spr_active[j] == 1'b1) color <= spr_color[j];
             end
-            for (integer i = 7; i >= 0; i = i - 1) begin
-                if (enable[i] && spr_active[i] == 1'b1) begin
-                    collision[i] = 1'b1;
-                    color <= spr_color[i];
+            for (k = 7; k >= 0; k = k - 1) begin
+                if (enable[k] && spr_active[k] == 1'b1) begin
+                    collision[k] = 1'b1;
+                    color <= spr_color[k];
                 end
             end
             case (collision)

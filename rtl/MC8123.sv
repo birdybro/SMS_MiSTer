@@ -3,38 +3,42 @@
 
 module MC8123_rom_decrypt
 (
-	input             clk,
+	input logic            clk,
 
 	// connect to CPU
-	input             m1,
-	input      [15:0] a,
-	output reg  [7:0] d,
+	input logic            m1,
+	input logic     [15:0] a,
+	output logic  [7:0] d,
 
 	// connect to program ROM
-	input       [7:0] prog_d,
+	input logic      [7:0] prog_d,
 
 	// connect to cpu decryption key ROM
-	output     [12:0] key_a,
-	input       [7:0] key_d
+	output logic    [12:0] key_a,
+	input logic      [7:0] key_d
 );
 
 assign key_a = {~m1,a[15:10],a[8],a[6],a[4],a[2:0]};
 
-wire [7:0] key = ~key_d;
+logic [7:0] key;
+assign key = ~key_d;
 
-wire [2:0] decrypt_type = {key[4]^key[5],
-		           key[0]^key[1]^key[2]^key[4],
+logic [2:0] decrypt_type;
+assign decrypt_type = {key[4]^key[5],
+		               key[0]^key[1]^key[2]^key[4],
 	                   key[0]^key[2]^~m1};
 
-wire [1:0] swap = {key[2]^key[3],
+logic [1:0] swap;
+assign swap = {key[2]^key[3],
 	           key[0]^key[1]};
 
-wire [3:0] param = {key[1]^key[6]^key[7],
+logic [3:0] param;
+assign param = {key[1]^key[6]^key[7],
 	            key[0]^key[1]^key[6],
 	            key[0]^key[2]^key[3],
-		    key[0]^~m1};
+		        key[0]^~m1};
 
-always @(posedge clk) begin
+always_ff @(posedge clk) begin
 	case (decrypt_type)
 		0: d <= decrypt_type_0 (prog_d, param, swap);
 		1: d <= decrypt_type_0 (prog_d, param, swap);
@@ -49,9 +53,9 @@ end
 
 `define bitswap8(a,b,c,d,e,f,g,h) {v[a],v[b],v[c],v[d],v[e],v[f],v[g],v[h]}
 
-reg [7:0] v;
-reg s;
-reg t;
+logic [7:0] v;
+logic s;
+logic t;
 
 function [7:0] decrypt_type_0;
 	input [7:0] value;

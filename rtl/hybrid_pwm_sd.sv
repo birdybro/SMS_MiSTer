@@ -22,12 +22,12 @@
 
 module hybrid_pwm_sd
 (
-	input clk,
-	input terminate,
-	input [15:0] d_l,
-	input [15:0] d_r,
-	output reg q_l,
-	output reg q_r
+	input logic clk,
+	input logic terminate,
+	input logic [15:0] d_l,
+	input logic [15:0] d_r,
+	output logic q_l,
+	output logic q_r
 );
 
 
@@ -35,9 +35,9 @@ module hybrid_pwm_sd
 // Output goes high when counter is 0
 // and goes low again when the threshold value is reached.
 
-reg [4:0] pwmcounter=5'b11111;
-reg [4:0] pwmthreshold_l = 5'd30;
-reg [4:0] pwmthreshold_r = 5'd30;
+logic [4:0] pwmcounter=5'b11111;
+logic [4:0] pwmthreshold_l = 5'd30;
+logic [4:0] pwmthreshold_r = 5'd30;
 
 always @(posedge clk) begin
 	pwmcounter<=pwmcounter+5'b1;
@@ -64,12 +64,12 @@ end
 // will prompt a ramp back up to maximum to avoid a pop
 // on core-change.
 
-reg term_ena=1'b0;
-wire terminated = terminate & term_ena;
+logic term_ena=1'b0;
+logic terminated = terminate & term_ena;
 
-reg [13:0] initctr = 14'h3e00;
-wire init = initctr[13];
-reg [13:0] initctr_l = 14'h3e00;
+logic [13:0] initctr = 14'h3e00;
+logic init = initctr[13];
+logic [13:0] initctr_l = 14'h3e00;
 
 always @(posedge clk) begin
 	if(init && dump) begin
@@ -87,8 +87,8 @@ end
 
 // Periodic dumping of the accumulator to kill standing tones.
 // Yes, I know, yuck.  In practice it works better than would be expected.
-reg [7:0] dumpcounter;
-reg dump;
+logic [7:0] dumpcounter;
+logic dump;
 
 always @(posedge clk) begin
 	dump <=1'b0;
@@ -106,12 +106,12 @@ end
 // as shift-and-add due to the fixed factor) is multiplexed between the left
 // and right channels, switching between the two every time the counters are reloaded.
 
-reg [33:0] scaledin = 33'hF0000000;
-reg [15:0] sigma_l = 16'hf000;
-reg [15:0] sigma_r = 16'hf000;
+logic [33:0] scaledin = 33'hF0000000;
+logic [15:0] sigma_l = 16'hf000;
+logic [15:0] sigma_r = 16'hf000;
 
-reg muxtoggle;
-wire [15:0] mux_in;
+logic muxtoggle;
+logic [15:0] mux_in;
 assign mux_in = (init | terminated) ? {initctr_l[13:0],2'b00} : ( muxtoggle ? d_r : d_l );
 
 always @(posedge clk) begin

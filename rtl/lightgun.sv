@@ -1,52 +1,56 @@
 
 module lightgun
 (
-	input        CLK,
-	input        RESET,
+	input logic       CLK,
+	input logic       RESET,
 
-	input [24:0] MOUSE,
-	input        MOUSE_XY,
+	input logic [24:0] MOUSE,
+	input logic        MOUSE_XY,
 
-	input  [7:0] JOY_X,
-	input  [7:0] JOY_Y,
-	input [11:0] JOY,
+	input logic  [7:0] JOY_X,
+	input logic  [7:0] JOY_Y,
+	input logic [11:0] JOY,
 
-	input        HDE,VDE,
-	input        CE_PIX,
+	input logic        HDE,VDE,
+	input logic        CE_PIX,
 
-	input        BTN_MODE,
-	input  [1:0] SIZE,
+	input logic        BTN_MODE,
+	input logic  [1:0] SIZE,
 	
-	input  [7:0] SENSOR_DELAY,
+	input logic  [7:0] SENSOR_DELAY,
 	
-	output       TARGET,
-	output       SENSOR,
-	output       TRIGGER
+	output logic       TARGET,
+	output logic       SENSOR,
+	output logic       TRIGGER
 );
 
 assign TARGET  = ~offscreen & draw;
 
-reg  [8:0] lg_x, x;
-reg  [8:0] lg_y, y;
+logic  [8:0] lg_x, x;
+logic  [8:0] lg_y, y;
 
-wire [9:0] new_x = {lg_x[8],lg_x} + {{2{MOUSE[4]}},MOUSE[15:8]};
-wire [9:0] new_y = {lg_y[8],lg_y} - {{2{MOUSE[5]}},MOUSE[23:16]};
+logic [9:0] new_x;
+assign new_x = {lg_x[8],lg_x} + {{2{MOUSE[4]}},MOUSE[15:8]};
+logic [9:0] new_y;
+assign new_y = {lg_y[8],lg_y} - {{2{MOUSE[5]}},MOUSE[23:16]};
 
-wire [8:0] j_x = {~JOY_X[7], JOY_X[6:0]};
-wire [8:0] j_y = {~JOY_Y[7], JOY_Y[6:0]};
+logic [8:0] j_x;
+assign j_x = {~JOY_X[7], JOY_X[6:0]};
+logic [8:0] j_y;
+assign j_y = {~JOY_Y[7], JOY_Y[6:0]};
 
-reg offscreen = 0, draw = 0;
-always @(posedge CLK) begin
-	reg old_pix, old_hde, old_vde, old_ms;
-	reg [8:0] hcnt;
-	reg [8:0] vcnt;
-	reg [8:0] vtotal;
-	reg [15:0] hde_d;
-	reg [8:0] xm,xp;
-	reg [8:0] ym,yp;
-	reg [8:0] cross_sz;
-	reg sensor_pend;
-	reg [7:0] sensor_time;
+logic offscreen = 0, draw = 0;
+always_ff @(posedge CLK) begin
+	logic old_pix, old_hde, old_vde, old_ms;
+	logic [8:0] hcnt;
+	logic [8:0] vcnt;
+	logic [8:0] vtotal;
+	logic [15:0] hde_d;
+	logic [8:0] xm,xp;
+	logic [8:0] ym,yp;
+	logic [8:0] cross_sz;
+	logic sensor_pend;
+	logic [7:0] sensor_time;
 	
 	TRIGGER <= BTN_MODE ? MOUSE[0] : (JOY[4]|JOY[9]);
 

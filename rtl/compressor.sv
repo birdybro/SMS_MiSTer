@@ -20,15 +20,15 @@
 
 module compressor
 (
-	input         clk,
-	input  [11:0] in1, in2,
-	output [15:0] out1, out2
+	input  logic        clk,
+	input  logic [11:0] in1, in2,
+	output logic [15:0] out1, out2
 );
 
-always @(posedge clk) out1 <= {in1[11], in1[11] ? ~tbl[~in1[10:0]] : tbl[in1[10:0]]};
-always @(posedge clk) out2 <= {in2[11], in2[11] ? ~tbl[~in2[10:0]] : tbl[in2[10:0]]};
+always_ff @(posedge clk) out1 <= {in1[11], in1[11] ? ~tbl[~in1[10:0]] : tbl[in1[10:0]]};
+always_ff @(posedge clk) out2 <= {in2[11], in2[11] ? ~tbl[~in2[10:0]] : tbl[in2[10:0]]};
 
-wire [14:0] tbl[0:2047] = 
+logic [14:0] tbl[0:2047] = 
 '{
 	//sin(x)
  15'h0000, 15'h0019, 15'h0032, 15'h004B, 15'h0064, 15'h007D, 15'h0096, 15'h00B0, 15'h00C9, 15'h00E2, 15'h00FB, 15'h0114, 15'h012D, 15'h0146, 15'h0160, 15'h0179,

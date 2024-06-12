@@ -1,18 +1,18 @@
 module AudioMix (
-    input  wire               clk,
-    input  wire               reset_n,
-    input  wire signed [15:0] audio_in_l1,
-    input  wire signed [15:0] audio_in_l2,
-    input  wire signed [15:0] audio_in_r1,
-    input  wire signed [15:0] audio_in_r2,
-    output reg  signed [15:0] audio_l,
-    output reg  signed [15:0] audio_r
+    input  logic               clk,
+    input  logic               reset_n,
+    input  logic signed [15:0] audio_in_l1,
+    input  logic signed [15:0] audio_in_l2,
+    input  logic signed [15:0] audio_in_r1,
+    input  logic signed [15:0] audio_in_r2,
+    output logic  signed [15:0] audio_l,
+    output logic  signed [15:0] audio_r
 );
 
-reg signed [16:0] in1, in2, sum, clipped;
-reg overflow, toggle;
+logic signed [16:0] in1, in2, sum, clipped;
+logic overflow, toggle;
 
-always @(*) begin
+always_comb begin
     // Sign extend the inputs to 17 bits
     in1[16] = in1[15];
     in2[16] = in2[15];
@@ -34,7 +34,7 @@ always @(*) begin
     clipped = (overflow == 0) ? sum : {sum[16], {16{sum[16]}}};
 end
 
-always @(posedge clk or negedge reset_n) begin
+always_ff @(posedge clk or negedge reset_n) begin
     if (!reset_n) begin
         audio_l <= 16'd0;
         audio_r <= 16'd0;

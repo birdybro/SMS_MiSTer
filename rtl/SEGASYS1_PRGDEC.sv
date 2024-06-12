@@ -28,15 +28,15 @@ module SEGASYS1_PRGDEC
 	input					ROMEN
 );
 
-wire  [7:0] od0,od1;
-wire [14:0] dum;
+logic  [7:0] od0,od1;
+logic [14:0] dum;
 
 SEGASYS1_DECT1 t1(clk,mrom_m1,mrom_ad, od0, rad,rdt, ROMCL,ROMAD,ROMDT,ROMEN);
 SEGASYS1_DECT2 t2(clk,mrom_m1,mrom_ad, od1, dum,rdt, ROMCL,ROMAD,ROMDT,ROMEN);
 
 // Type Detect and switch
-reg [15:0] cnt0,cnt2;
-always @(posedge ROMCL) begin
+logic [15:0] cnt0,cnt2;
+always_ff @(posedge ROMCL) begin
 	if (ROMEN) begin
 		if (ROMAD>=`DECTBLADRS) begin
 			cnt2 <= (ROMDT>=8'd24) ? 16'd0 : (cnt2+1'd1);
@@ -62,7 +62,7 @@ module SEGASYS1_DECT1
 
 	input					mrom_m1,		// connect to CPU
 	input     [14:0]	mrom_ad,
-	output reg [7:0]	mrom_dt,
+	output logic [7:0]	mrom_dt,
 
 	output    [14:0]	rad,			// connect to ROM
 	input		  [7:0]	rdt,
@@ -73,21 +73,21 @@ module SEGASYS1_DECT1
 	input					ROMEN
 );
 
-reg  [15:0] madr;
-wire  [7:0] mdat = rdt;
+logic  [15:0] madr;
+logic  [7:0] mdat = rdt;
 
-wire			f		  = mdat[7];
-wire  [7:0] xorv    = { f, 1'b0, f, 1'b0, f, 3'b000 }; 
-wire  [7:0] andv    = ~(8'hA8);
-wire  [1:0] decidx0 = { mdat[5],  mdat[3] } ^ { f, f };
-wire  [6:0] decidx  = { madr[12], madr[8], madr[4], madr[0], ~madr[15], decidx0 };
-wire  [7:0] dectbl;
-wire  [7:0] mdec    = ( mdat & andv ) | ( dectbl ^ xorv );
+logic			f		  = mdat[7];
+logic  [7:0] xorv    = { f, 1'b0, f, 1'b0, f, 3'b000 }; 
+logic  [7:0] andv    = ~(8'hA8);
+logic  [1:0] decidx0 = { mdat[5],  mdat[3] } ^ { f, f };
+logic  [6:0] decidx  = { madr[12], madr[8], madr[4], madr[0], ~madr[15], decidx0 };
+logic  [7:0] dectbl;
+logic  [7:0] mdec    = ( mdat & andv ) | ( dectbl ^ xorv );
 
 DLROM #(7,8) dect( clk, decidx, dectbl, ROMCL,ROMAD,ROMDT,ROMEN & `EN_DEC1TBL );
 
-reg phase = 1'b0;
-always @(posedge clk ) begin
+logic phase = 1'b0;
+always_ff @(posedge clk ) begin
 	if ( phase ) mrom_dt <= mdec;
 	else madr <= { mrom_m1, mrom_ad };
 	phase <= ~phase;
@@ -107,7 +107,7 @@ module SEGASYS1_DECT2
 
 	input					mrom_m1,		// connect to CPU
 	input     [14:0]	mrom_ad,
-	output reg [7:0]	mrom_dt,
+	output logic [7:0]	mrom_dt,
 
 	output    [14:0]	rad,			// connect to ROM
 	input		  [7:0]	rdt,
@@ -156,16 +156,17 @@ input [7:0] v;
 
 endfunction
 
-reg [15:0] madr;
+logic [15:0] madr;
 
-wire [7:0] sd,xd;
-wire [6:0] ix = {madr[14],madr[12],madr[9],madr[6],madr[3],madr[0],~madr[15]};
+logic [7:0] sd,xd;
+logic [6:0] ix;
+assign ix = {madr[14],madr[12],madr[9],madr[6],madr[3],madr[0],~madr[15]};
 
 DLROM #(7,8) xort(clk,ix,xd, ROMCL,ROMAD,ROMDT,ROMEN & `EN_DEC2XOR);
 DLROM #(7,8) swpt(clk,ix,sd, ROMCL,ROMAD,ROMDT,ROMEN & `EN_DEC2SWP);
 
-reg phase = 1'b0;
-always @(posedge clk ) begin
+logic phase = 1'b0;
+always_ff @(posedge clk ) begin
 	if ( phase ) mrom_dt <= (bswp(sd,rdt) ^ xd);
 	else madr <= { mrom_m1, mrom_ad };
 	phase <= ~phase;

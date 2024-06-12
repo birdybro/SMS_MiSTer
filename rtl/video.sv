@@ -1,27 +1,27 @@
 module video (
-    input clk,
-    input ce_pix,
-    input pal,
-    input border,
-    input ggres,
-    input mask_column,
-    input cut_mask,
-    input smode_M1,
-    input smode_M3,
-    output reg [8:0] x,
-    output reg [8:0] y,
-    output reg hsync,
-    output reg vsync,
-    output reg hblank,
-    output reg vblank
+    input  logic clk,
+    input  logic ce_pix,
+    input  logic pal,
+    input  logic border,
+    input  logic ggres,
+    input  logic mask_column,
+    input  logic cut_mask,
+    input  logic smode_M1,
+    input  logic smode_M3,
+    output logic [8:0] x,
+    output logic [8:0] y,
+    output logic hsync,
+    output logic vsync,
+    output logic hblank,
+    output logic vblank
 );
 
-reg [8:0] hcount = 0;
-reg [8:0] vcount = 0;
-reg [8:0] vbl_st, vbl_end;
-reg [8:0] hbl_st, hbl_end;
+logic [8:0] hcount = 0;
+logic [8:0] vcount = 0;
+logic [8:0] vbl_st, vbl_end;
+logic [8:0] hbl_st, hbl_end;
 
-always @(posedge clk) begin
+always_ff @(posedge clk) begin
     if (ce_pix) begin
         if (hcount == 487) begin
             hcount <= 0;
@@ -94,7 +94,7 @@ always @(posedge clk) begin
     end
 end
 
-always @(posedge clk) begin
+always_ff @(posedge clk) begin
     if (ce_pix) begin
         if (hcount == hbl_end) begin
             hblank <= 0;
@@ -110,7 +110,7 @@ always @(posedge clk) begin
     end
 end
 
-always @* begin
+always_comb begin
     x = hcount;
     y = vcount;
 

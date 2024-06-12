@@ -1,142 +1,147 @@
 module system #(
-    parameter integer MAX_SPPL = 7,
-    parameter string BASE_DIR = ""
+    parameter integer MAX_SPPL = 7
 )(
-    input wire clk_sys,
-    input wire ce_cpu,
-    input wire ce_vdp,
-    input wire ce_pix,
-    input wire ce_sp,
-    input wire turbo,
-    input wire gg,
-    input wire ggres,
-    input wire systeme,
-    input wire bios_en,
-    input wire GG_EN,
-    input wire [128:0] GG_CODE,
-    input wire GG_RESET,
-    output wire GG_AVAIL,
-    input wire RESET_n,
-    output wire rom_rd,
-    output wire [21:0] rom_a,
-    input wire [7:0] rom_do,
-    input wire j1_up,
-    input wire j1_down,
-    input wire j1_left,
-    input wire j1_right,
-    input wire j1_tl,
-    input wire j1_tr,
-    input wire j1_th,
-    input wire j1_start,
-    input wire j1_coin,
-    input wire j1_a3,
-    input wire j2_up,
-    input wire j2_down,
-    input wire j2_left,
-    input wire j2_right,
-    input wire j2_tl,
-    input wire j2_tr,
-    input wire j2_th,
-    input wire j2_start,
-    input wire j2_coin,
-    input wire j2_a3,
-    input wire pause,
-    input wire [1:0] E0Type,
-    input wire E1Use,
-    input wire E2Use,
-    input wire [7:0] E0,
-    input wire [7:0] F2,
-    input wire [7:0] F3,
-    input wire has_paddle,
-    input wire has_pedal,
-    input wire [7:0] paddle,
-    input wire [7:0] paddle2,
-    input wire [7:0] pedal,
-    output wire j1_tr_out,
-    output wire j1_th_out,
-    output wire j2_tr_out,
-    output wire j2_th_out,
-    input wire [8:0] x,
-    input wire [8:0] y,
-    output wire [11:0] color,
-    input wire palettemode,
-    output wire mask_column,
-    input wire black_column,
-    output wire smode_M1,
-    output wire smode_M2,
-    output wire smode_M3,
-    input wire ysj_quirk,
-    input wire pal,
-    input wire region,
-    input wire mapper_lock,
-    input wire [1:0] vdp_enables,
-    input wire [1:0] psg_enables,
-    output wire [15:0] audioL,
-    output wire [15:0] audioR,
-    input wire fm_ena,
-    input wire dbr,
-    input wire sp64,
-    output wire [13:0] ram_a,
-    output wire [7:0] ram_d,
-    output wire ram_we,
-    input wire [7:0] ram_q,
-    output wire [14:0] nvram_a,
-    output wire [7:0] nvram_d,
-    output wire nvram_we,
-    input wire [7:0] nvram_q,
-    input wire [1:0] encrypt,
-    output wire [12:0] key_a,
-    input wire [7:0] key_d,
-    input wire ROMCL,
-    input wire [24:0] ROMAD,
-    input wire [7:0] ROMDT,
-    input wire ROMEN
+    input logic clk_sys,
+    input logic ce_cpu,
+    input logic ce_vdp,
+    input logic ce_pix,
+    input logic ce_sp,
+    input logic turbo,
+    input logic gg,
+    input logic ggres,
+    input logic systeme,
+    input logic bios_en,
+    input logic GG_EN,
+    input logic [128:0] GG_CODE,
+    input logic GG_RESET,
+    output logic GG_AVAIL,
+    input logic RESET_n,
+    output logic rom_rd,
+    output logic [21:0] rom_a,
+    input logic [7:0] rom_do,
+    input logic j1_up,
+    input logic j1_down,
+    input logic j1_left,
+    input logic j1_right,
+    input logic j1_tl,
+    input logic j1_tr,
+    input logic j1_th,
+    input logic j1_start,
+    input logic j1_coin,
+    input logic j1_a3,
+    input logic j2_up,
+    input logic j2_down,
+    input logic j2_left,
+    input logic j2_right,
+    input logic j2_tl,
+    input logic j2_tr,
+    input logic j2_th,
+    input logic j2_start,
+    input logic j2_coin,
+    input logic j2_a3,
+    input logic pause,
+    input logic [1:0] E0Type,
+    input logic E1Use,
+    input logic E2Use,
+    input logic [7:0] E0,
+    input logic [7:0] F2,
+    input logic [7:0] F3,
+    input logic has_paddle,
+    input logic has_pedal,
+    input logic [7:0] paddle,
+    input logic [7:0] paddle2,
+    input logic [7:0] pedal,
+    output logic j1_tr_out,
+    output logic j1_th_out,
+    output logic j2_tr_out,
+    output logic j2_th_out,
+    input logic [8:0] x,
+    input logic [8:0] y,
+    output logic [11:0] color,
+    input logic palettemode,
+    output logic mask_column,
+    input logic black_column,
+    output logic smode_M1,
+    output logic smode_M2,
+    output logic smode_M3,
+    input logic ysj_quirk,
+    input logic pal,
+    input logic region,
+    input logic mapper_lock,
+    input logic [1:0] vdp_enables,
+    input logic [1:0] psg_enables,
+    output logic [15:0] audioL,
+    output logic [15:0] audioR,
+    input logic fm_ena,
+    input logic dbr,
+    input logic sp64,
+    output logic [13:0] ram_a,
+    output logic [7:0] ram_d,
+    output logic ram_we,
+    input logic [7:0] ram_q,
+    output logic [14:0] nvram_a,
+    output logic [7:0] nvram_d,
+    output logic nvram_we,
+    input logic [7:0] nvram_q,
+    input logic [1:0] encrypt,
+    output logic [12:0] key_a,
+    input logic [7:0] key_d,
+    input logic ROMCL,
+    input logic [24:0] ROMAD,
+    input logic [7:0] ROMDT,
+    input logic ROMEN
 );
 
 // Internal signals
-wire RD_n, WR_n, IRQ_n, IORQ_n, M1_n, MREQ_n;
-wire [15:0] A;
-wire [7:0] D_in, D_out, last_read_addr;
-wire ce_z80, vdp_RD_n, vdp_WR_n;
-wire [7:0] vdp_D_out, vdp2_D_out;
-wire vdp_IRQ_n, vdp2_IRQ_n;
-wire [11:0] vdp_color, vdp2_color;
-wire ctl_WR_n, io_RD_n, io_WR_n;
-wire [7:0] io_D_out, ram_D_out;
-wire vram_WR, vram2_WR;
-wire [7:0] boot_rom_D_out;
-reg bootloader_n = 0;
-wire [7:0] irom_D_out;
-reg irom_RD_n = 1;
-reg [7:0] bank0 = 8'h00, bank1 = 8'h01, bank2 = 8'h02, bank3 = 8'h03;
-reg vdp_se_bank = 0, vdp2_se_bank = 0, vdp_cpu_bank = 0;
-reg [3:0] rom_bank = 4'h0;
-wire PSG_disable;
-wire [10:0] PSG_outL, PSG_outR;
-wire [7:0] PSG_mux;
-wire psg_WR_n, bal_WR_n;
-wire [10:0] PSG2_outL, PSG2_outR;
-wire psg2_WR_n, bal2_WR_n;
-wire [13:0] FM_out;
-wire [12:0] FM_gated;
-wire FM_sign = FM_out[13], FM_adj = FM_out[12];
-wire fm_a;
-wire [7:0] fm_d;
-wire fm_WR_n;
-wire [12:0] mix_inL, mix_inR, mix2_inL, mix2_inR;
-wire [2:0] det_D;
-wire det_WR_n;
-wire HL, TH_Ain, TH_Bin;
-wire nvram_WR, nvram_e = 0, nvram_ex = 0, nvram_p = 0, nvram_cme = 0;
-wire [7:0] nvram_D_out;
-reg lock_mapper_B = 0;
-reg mapper_codies = 0;
-reg mapper_codies_lock = 0;
-reg mapper_msx_check0 = 0, mapper_msx_check1 = 0, mapper_msx_lock0 = 0, mapper_msx_lock = 0;
-wire mapper_msx = 0;
-wire [7:0] mc8123_D_out, segadect2_D_out;
-wire GENIE;
-wire [7:0] GENIE_DO, GENIE_DI;
+logic RD_n, WR_n, IRQ_n, IORQ_n, M1_n, MREQ_n;
+logic [15:0] A;
+logic [7:0] D_in, D_out, last_read_addr;
+logic ce_z80, vdp_RD_n, vdp2_RD_n, vdp_WR_n, vdp2_WR_n;
+logic [7:0] vdp_D_out, vdp2_D_out;
+logic vdp_IRQ_n, vdp2_IRQ_n;
+logic [11:0] vdp_color, vdp2_color;
+logic vdp2_y1;
+logic ctl_WR_n, io_RD_n, io_WR_n;
+logic [7:0] io_D_out, ram_D_out;
+logic ram_WR;
+logic vram_WR, vram2_WR;
+logic [7:0] boot_rom_D_out;
+logic bootloader_n = 0;
+logic [7:0] irom_D_out;
+logic irom_RD_n = 1;
+logic [7:0] bank0 = 8'h00, bank1 = 8'h01, bank2 = 8'h02, bank3 = 8'h03;
+logic vdp_se_bank, vdp2_se_bank, vdp_cpu_bank;
+logic [3:0] rom_bank;
+logic PSG_disable;
+logic [10:0] PSG_outL, PSG_outR;
+logic [7:0] PSG_mux;
+logic psg_WR_n, bal_WR_n;
+logic [10:0] PSG2_outL, PSG2_outR;
+logic psg2_WR_n, bal2_WR_n;
+logic [13:0] FM_out;
+logic [12:0] FM_gated;
+logic FM_sign;
+assign FM_sign = FM_out[13];
+logic FM_adj;
+assign FM_adj = FM_out[12];
+logic fm_a;
+logic [7:0] fm_d;
+logic fm_WR_n;
+logic [12:0] mix_inL, mix_inR, mix2_inL, mix2_inR;
+logic [2:0] det_D;
+logic det_WR_n;
+logic HL, TH_Ain, TH_Bin;
+logic nvram_WR;
+logic nvram_e = 0, nvram_ex = 0, nvram_p = 0, nvram_cme = 0;
+logic [7:0] nvram_D_out;
+logic lock_mapper_B = 0;
+logic mapper_codies = 0;
+logic mapper_codies_lock = 0;
+logic mapper_msx_check0 = 0, mapper_msx_check1 = 0, mapper_msx_lock0 = 0, mapper_msx_lock = 0;
+logic mapper_msx = 0;
+logic [7:0] mc8123_D_out, segadect2_D_out;
+logic GENIE;
+logic [7:0] GENIE_DO, GENIE_DI;
 
 // Component instantiations
 CODES #(
@@ -231,6 +236,7 @@ vdp #(
     .y(y),
     .color(vdp2_color),
     .palettemode(palettemode),
+	 .y1(vdp2_y1),
     .ysj_quirk(ysj_quirk),
     .black_column(black_column),
     .reset_n(RESET_n)
@@ -269,7 +275,7 @@ opll fm (
     .mixout(FM_out)
 );
 
-always @(posedge clk_sys) begin
+always_ff @(posedge clk_sys) begin
     if (!RESET_n) begin
         fm_d <= 8'b0;
         fm_a <= 1'b0;
@@ -373,7 +379,7 @@ assign nvram_d = D_in;
 assign nvram_D_out = nvram_q;
 
 sprom #(
-    .init_file(BASE_DIR & "rtl/mboot.mif"),
+    .init_file("rtl/mboot.mif"),
     .widthad_a(14)
 ) boot_rom_inst (
     .clock(clk_sys),
@@ -422,12 +428,12 @@ assign ram_WR = (WR_n == 1'b0 && MREQ_n == 1'b0 && A[15:14] == 2'b11) ? 1'b1 : 1
 assign vram_WR = (WR_n == 1'b0 && MREQ_n == 1'b0 && A[15:14] == 2'b10 && vdp_cpu_bank == 1'b1 && systeme == 1'b1) ? 1'b1 : 1'b0;
 assign vram2_WR = (WR_n == 1'b0 && MREQ_n == 1'b0 && A[15:14] == 2'b10 && vdp_cpu_bank == 1'b0 && systeme == 1'b1) ? 1'b1 : 1'b0;
 assign nvram_WR = (WR_n == 1'b0 && MREQ_n == 1'b0 && ((A[15:14] == 2'b10 && nvram_e == 1'b1) || (A[15:14] == 2'b11 && nvram_ex == 1'b1) || (A[15:13] == 3'b101 && nvram_cme == 1'b1))) ? 1'b1 : 1'b0;
-assign rom_RD = (RD_n == 1'b0 && MREQ_n == 1'b0 && A[15:14] != 2'b11) ? 1'b1 : 1'b0;
+assign rom_rd = (RD_n == 1'b0 && MREQ_n == 1'b0 && A[15:14] != 2'b11) ? 1'b1 : 1'b0;
 
 assign color = (vdp2_y1 == 1'b1 && systeme == 1'b1 && vdp_enables[1] == 1'b0) ? vdp2_color :
                (vdp_enables[0] == 1'b0) ? vdp_color : 12'h000;
 
-always @(posedge clk_sys) begin
+always_ff @(posedge clk_sys) begin
     if (!RESET_n) begin
         bootloader_n <= ~bios_en;
     end else if (!ctl_WR_n && bootloader_n == 1'b0) begin
@@ -439,7 +445,7 @@ assign irom_D_out = (bootloader_n == 1'b0 && A[15:14] == 2'b00) ? boot_rom_D_out
                     (encrypt == 2'b10 && A[15] == 1'b0) ? segadect2_D_out :
                     (encrypt[0] == 1'b1 && A[15] == 1'b0 || encrypt == 2'b11 && A[14] == 1'b0) ? mc8123_D_out : rom_do;
 
-always @(posedge clk_sys) begin
+always_ff @(posedge clk_sys) begin
     if (!RESET_n) begin
         det_D <= 3'b111;
         PSG_mux <= 8'hFF;
@@ -450,7 +456,7 @@ always @(posedge clk_sys) begin
     end
 end
 
-always @(*) begin
+always_comb begin
     if (!IORQ_n) begin
         if (A == 8'hF2 && fm_ena == 1'b1 && systeme == 1'b0) begin
             D_out = {5'b11111, det_D};
@@ -481,7 +487,7 @@ always @(*) begin
     end
 end
 
-always @(posedge clk_sys or negedge RESET_n) begin
+always_ff @(posedge clk_sys or negedge RESET_n) begin
     if (!RESET_n) begin
         mapper_msx_check0 <= 1'b0;
         mapper_msx_check1 <= 1'b0;
@@ -503,7 +509,7 @@ always @(posedge clk_sys or negedge RESET_n) begin
     end
 end
 
-always @(posedge clk_sys or negedge RESET_n) begin
+always_ff @(posedge clk_sys or negedge RESET_n) begin
     if (!RESET_n) begin
         bank0 <= 8'h00;
         bank1 <= 8'h01;
@@ -586,9 +592,9 @@ always @(posedge clk_sys or negedge RESET_n) begin
     end
 end
 
-assign rom_a[12:0] = A[12:0];
+always_ff @(posedge clk_sys) rom_a[12:0] <= A[12:0];
 
-always @(*) begin
+always_comb begin
     if (systeme == 1'b1) begin
         case (A[15:14])
             2'b10: rom_a[21:13] = {4'b0000, rom_bank, A[13]};

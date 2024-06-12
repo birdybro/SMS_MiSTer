@@ -1,37 +1,37 @@
 module vdp_background (
-    input wire clk_sys,
-    input wire ce_pix,
-    input wire reset,
-    input wire [3:0] table_address,
-    input wire [2:0] pt_address,
-    input wire [7:0] ct_address,
-    input wire [7:0] scroll_x,
-    input wire disable_hscroll,
-    input wire smode_M1,
-    input wire smode_M3,
-    input wire smode_M4,
-    input wire ysj_quirk,
-    input wire [7:0] y,
-    input wire [8:0] screen_y,
-    output reg [13:0] vram_A,
-    input wire [7:0] vram_D,
-    output reg [4:0] color,
-    output reg priority
+    input logic clk_sys,
+    input logic ce_pix,
+    input logic reset,
+    input logic [3:0] table_address,
+    input logic [2:0] pt_address,
+    input logic [7:0] ct_address,
+    input logic [7:0] scroll_x,
+    input logic disable_hscroll,
+    input logic smode_M1,
+    input logic smode_M3,
+    input logic smode_M4,
+    input logic ysj_quirk,
+    input logic [7:0] y,
+    input logic [8:0] screen_y,
+    output logic [13:0] vram_A,
+    input logic [7:0] vram_D,
+    output logic [4:0] color,
+    output logic priority_o
 );
 
-    reg [8:0] tile_index;
-    reg [7:0] x;
-    reg [2:0] tile_y;
-    reg palette;
-    reg priority_latch;
-    reg flip_x;
+    logic [8:0] tile_index;
+    logic [7:0] x;
+    logic [2:0] tile_y;
+    logic palette;
+    logic priority_latch;
+    logic flip_x;
 
-    reg [7:0] datac;
-    reg [7:0] data0, data1, data2, data3;
+    logic [7:0] datac;
+    logic [7:0] data0, data1, data2, data3;
 
-    reg [7:0] shift0, shift1, shift2, shift3;
+    logic [7:0] shift0, shift1, shift2, shift3;
 
-    always @(posedge clk_sys) begin
+    always_ff @(posedge clk_sys) begin
         if (ce_pix) begin
             if (reset) begin
                 if (!smode_M4) begin
@@ -47,7 +47,7 @@ module vdp_background (
         end
     end
 
-    always @(posedge clk_sys) begin
+    always_ff @(posedge clk_sys) begin
         if (ce_pix) begin
             if (smode_M4) begin
                 if (smode_M1 || smode_M3) begin
@@ -70,7 +70,8 @@ module vdp_background (
         end
     end
 
-    always @(posedge clk_sys) begin
+    integer i;
+    always_ff @(posedge clk_sys) begin
         if (ce_pix) begin
             if (smode_M4) begin
                 case (x[2:0])
@@ -96,7 +97,6 @@ module vdp_background (
                         flip_x <= 1'b0;
                         palette <= 1'b0;
                         priority_latch <= 1'b0;
-                        integer i;
                         for (i = 0; i < 8; i = i + 1) begin
                             data0[i] <= (~datac[i] & vram_D[0]) | (datac[i] & vram_D[4]);
                             data1[i] <= (~datac[i] & vram_D[1]) | (datac[i] & vram_D[5]);
@@ -109,7 +109,7 @@ module vdp_background (
         end
     end
 
-    always @(posedge clk_sys) begin
+    always_ff @(posedge clk_sys) begin
         if (ce_pix) begin
             case (x[2:0])
                 3'b111: begin
@@ -125,7 +125,7 @@ module vdp_background (
                         shift3 <= {vram_D[0], vram_D[1], vram_D[2], vram_D[3], vram_D[4], vram_D[5], vram_D[6], vram_D[7]};
                     end
                     color[4] <= palette;
-                    priority <= priority_latch;
+                    priority_o <= priority_latch;
                 end
                 default: begin
                     shift0 <= {shift0[6:0], 1'b0};
@@ -137,9 +137,11 @@ module vdp_background (
         end
     end
 
-    assign color[0] = shift0[7];
-    assign color[1] = shift1[7];
-    assign color[2] = shift2[7];
-    assign color[3] = shift3[7];
+    always_comb begin
+        color[0] = shift0[7];
+        color[1] = shift1[7];
+        color[2] = shift2[7];
+        color[3] = shift3[7];
+    end
 
 endmodule

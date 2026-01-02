@@ -10,10 +10,6 @@ entity io is
 		D_in:		in	 STD_LOGIC_VECTOR (7 downto 0);
 		D_out:	out STD_LOGIC_VECTOR (7 downto 0);
 		HL_out:	out STD_LOGIC;
-		vdp1_bank:out STD_LOGIC;
-		vdp2_bank:out STD_LOGIC;
-		vdp_cpu_bank:out STD_LOGIC;
-		rom_bank:out STD_LOGIC_VECTOR (3 downto 0);
 		J1_tr_out: out  STD_LOGIC;
 		J1_th_out: out  STD_LOGIC;
 		J2_tr_out: out  STD_LOGIC;
@@ -95,13 +91,6 @@ begin
 						-- when "101" => gg_sctrl <= D_in(7 downto 3) ; --sio.sctrl = data & 0xF8;
 						when others => null ;
 					end case;
-				end if;
-			elsif systeme='1' and A = x"F7" then
-				if WR_n='0' then
-					vdp1_bank <= D_in(7);
-					vdp2_bank <= D_in(6);
-					vdp_cpu_bank <= D_in(5);
-					rom_bank <= D_in(3 downto 0);
 				end if;
 			elsif systeme='1' and A = x"FA" then
 				if WR_n='0' then

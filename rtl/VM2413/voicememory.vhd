@@ -43,7 +43,13 @@ entity VoiceMemory is
     rwaddr : in VOICE_ID_TYPE; -- read/write address
     roaddr : in VOICE_ID_TYPE; -- read only address
     odata  : out VOICE_TYPE;
-    rodata : out VOICE_TYPE
+    rodata : out VOICE_TYPE;
+    -- savestate sideband
+    ss_wren  : in  std_logic := '0';
+    ss_waddr : in  std_logic_vector(5 downto 0) := (others => '0');
+    ss_wdata : in  VOICE_VECTOR_TYPE := (others => '0');
+    ss_voice0: out VOICE_VECTOR_TYPE := (others => '0');
+    ss_voice1: out VOICE_VECTOR_TYPE := (others => '0')
   );
 end VoiceMemory;
 
@@ -96,6 +102,8 @@ begin
           init_id := init_id + 1;
         end case;
 
+      elsif ss_wren = '1' then
+        voices(conv_integer(ss_waddr)) <= ss_wdata;
       elsif wr = '1' then
         voices(rwaddr) <= CONV_VOICE_VECTOR(idata);
       end if;
@@ -106,5 +114,8 @@ begin
     end if;
 
   end process;
+
+  ss_voice0 <= voices(0);
+  ss_voice1 <= voices(1);
 
 end RTL;

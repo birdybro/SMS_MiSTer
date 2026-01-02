@@ -2,6 +2,9 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use IEEE.NUMERIC_STD.ALL;
+use work.pBus_savestates.all;
+use work.pReg_savestates_sms.all;
 
 entity vdp is
 	generic (
@@ -37,7 +40,23 @@ entity vdp is
 		smode_M3: 		out STD_LOGIC;
 		smode_M4: 		out STD_LOGIC;
 		ysj_quirk:		in  STD_LOGIC;
-		reset_n:       in  STD_LOGIC);
+		reset_n:       in  STD_LOGIC;
+		-- savestates
+		sleep_savestate: in  STD_LOGIC := '0';
+		Savestate_VRAMAddr : in  STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
+		Savestate_VRAMWrEn : in  STD_LOGIC := '0';
+		Savestate_VRAMWriteData: in STD_LOGIC_VECTOR(7 downto 0) := (others => '0');
+		Savestate_VRAMReadData : out STD_LOGIC_VECTOR(7 downto 0);
+		Savestate_CRAMReadData : out STD_LOGIC_VECTOR(7 downto 0);
+		Savestate_CRAMAddr : in STD_LOGIC_VECTOR(5 downto 0) := (others => '0');
+		Savestate_CRAMWrEn : in STD_LOGIC := '0';
+		Savestate_CRAMWriteData : in STD_LOGIC_VECTOR(7 downto 0) := (others => '0');
+		SaveStateBus_Din  : in  STD_LOGIC_VECTOR(63 downto 0) := (others => '0');
+		SaveStateBus_Adr  : in  STD_LOGIC_VECTOR(9 downto 0) := (others => '0');
+		SaveStateBus_wren : in  STD_LOGIC := '0';
+		SaveStateBus_rst  : in  STD_LOGIC := '0';
+		SaveStateBus_Dout : out STD_LOGIC_VECTOR(63 downto 0)
+		);
 end vdp;
 
 architecture Behavioral of vdp is
@@ -60,9 +79,19 @@ architecture Behavioral of vdp is
 	signal vram_cpu_WE:		std_logic;
 	signal cram_cpu_WE:		std_logic;
 	signal vram_cpu_D_out:	std_logic_vector(7 downto 0);	
+	signal vram_q:           std_logic_vector(7 downto 0);
 	signal vram_cpu_D_outl:	std_logic_vector(7 downto 0);	
+	signal vram_a_addr:     std_logic_vector(14 downto 0);
+	signal vram_a_wren:     std_logic;
+	signal vram_a_data:     std_logic_vector(7 downto 0);
 	signal xram_cpu_A_incr:	std_logic := '0';
 	signal xram_cpu_read:	std_logic := '0';
+	-- savestates
+	type t_SaveStateBus_wired_or is array(0 to 1) of std_logic_vector(63 downto 0);
+	signal SaveStateBus_wired_or : t_SaveStateBus_wired_or;
+	signal SS_VDP0, SS_VDP0_BACK : std_logic_vector(63 downto 0);
+	signal SS_VDP1, SS_VDP1_BACK : std_logic_vector(63 downto 0);
+	signal load_vdp0, load_vdp1 : std_logic := '0';
 	
 	-- vram and cram lines for the video interface
 	signal vram_vdp_A:		std_logic_vector(13 downto 0);
@@ -71,6 +100,9 @@ architecture Behavioral of vdp is
 	signal cram_vdp_D:		std_logic_vector(11 downto 0);
 	signal cram_vdp_A_in:	std_logic_vector(4 downto 0);
 	signal cram_vdp_D_in:	std_logic_vector(11 downto 0);
+	signal cram_ss_q:      std_logic_vector(11 downto 0);
+	signal cram_ss_din:    std_logic_vector(11 downto 0);
+	signal cram_ss_upper:  std_logic;
 			
 	-- control bits
 	signal display_on:		std_logic := '1';
@@ -171,7 +203,11 @@ begin
 		spr_overflow	=> spr_overflow);
 
     
-  vdp_vram_inst : entity work.dpram
+    vram_a_addr <= Savestate_VRAMAddr when sleep_savestate='1' else vram_cpu_A;
+    vram_a_wren <= Savestate_VRAMWrEn when sleep_savestate='1' else vram_cpu_WE;
+    vram_a_data <= Savestate_VRAMWriteData when sleep_savestate='1' else D_in;
+
+    vdp_vram_inst : entity work.dpram
     generic map
     (
       widthad_a		=> 15
@@ -179,10 +215,10 @@ begin
     port map
     (
       clock_a			=> clk_sys,
-      address_a		=> vram_cpu_A,
-      wren_a			=> vram_cpu_WE,
-      data_a			=> D_in,
-      q_a				=> vram_cpu_D_out,
+      address_a		=> vram_a_addr,
+      wren_a			=> vram_a_wren,
+      data_a			=> vram_a_data,
+      q_a				=> vram_q,
 
       clock_b			=> clk_sys,
       address_b		=> se_bank & vram_vdp_A,
@@ -191,7 +227,10 @@ begin
       q_b				=> vram_vdp_D
     );
 
-	vdp_cram_inst: entity work.vdp_cram
+    vram_cpu_D_out <= vram_q;
+    Savestate_VRAMReadData <= vram_q;
+
+vdp_cram_inst: entity work.vdp_cram
 	port map (
 		cpu_clk			=> clk_sys,
 		cpu_WE			=> cram_cpu_WE,
@@ -199,8 +238,19 @@ begin
 		cpu_D				=> cram_vdp_D_in,
 		vdp_clk			=> clk_sys,
 		vdp_A				=> cram_vdp_A,
-		vdp_D				=> cram_vdp_D
+		vdp_D				=> cram_vdp_D,
+		ss_ena       => sleep_savestate,
+		ss_we        => Savestate_CRAMWrEn,
+		ss_A         => Savestate_CRAMAddr(4 downto 0),
+		ss_D         => cram_ss_din,
+		ss_Q         => cram_ss_q
 	);
+	cram_ss_upper <= Savestate_CRAMAddr(5);
+	cram_ss_din <= cram_ss_q(11 downto 8) & Savestate_CRAMWriteData when cram_ss_upper='0'
+	               else Savestate_CRAMWriteData(3 downto 0) & cram_ss_q(7 downto 0);
+
+	Savestate_CRAMReadData <= cram_ss_q(7 downto 0) when cram_ss_upper='0'
+	                       else ("0000" & cram_ss_q(11 downto 8));
 
 	cram_vdp_A_in <= xram_cpu_A(4 downto 0) when gg='0' else xram_cpu_A(5 downto 1);
 	cram_vdp_D_in <= (D_in(5 downto 4) & D_in(5 downto 4) & D_in(3 downto 2) & D_in(3 downto 2) & D_in(1 downto 0) & D_in(1 downto 0))
@@ -209,18 +259,55 @@ begin
 	vram_cpu_WE <= data_write when (WR_direct='1' or not to_cram) else '0';
 	vram_cpu_A <= not se_bank & A_direct & A when WR_direct='1' else se_bank & xram_cpu_A;
 	
-	smode_M1 <= mode_M1 and mode_M2 ;
-	smode_M2 <= mode_M2;
-	smode_M3 <= mode_M3 and mode_M2 ;
-	smode_M4 <= mode_M4;
+smode_M1 <= mode_M1 and mode_M2 ;
+smode_M2 <= mode_M2;
+smode_M3 <= mode_M3 and mode_M2 ;
+smode_M4 <= mode_M4;
+
+-- savestate register packing
+SS_VDP0(0)  <= display_on;
+SS_VDP0(1)  <= disable_hscroll;
+SS_VDP0(2)  <= disable_vscroll;
+SS_VDP0(3)  <= mask_column0;
+SS_VDP0(4)  <= irq_frame_en;
+SS_VDP0(5)  <= irq_line_en;
+SS_VDP0(13 downto 6) <= irq_line_count;
+SS_VDP0(14) <= spr_shift;
+SS_VDP0(15) <= spr_tall;
+SS_VDP0(16) <= spr_wide;
+SS_VDP0(19 downto 17) <= spr_high_bits;
+SS_VDP0(26 downto 20) <= spr_address;
+SS_VDP0(30 downto 27) <= overscan;
+SS_VDP0(31) <= mode_M1;
+SS_VDP0(32) <= mode_M2;
+SS_VDP0(33) <= mode_M3;
+SS_VDP0(34) <= mode_M4;
+SS_VDP0(38 downto 35) <= bg_address;
+SS_VDP0(41 downto 39) <= m2mg_address;
+SS_VDP0(49 downto 42) <= m2ct_address;
+SS_VDP0(63 downto 50) <= (others => '0');
+
+SS_VDP1(7 downto 0)   <= bg_scroll_x;
+SS_VDP1(15 downto 8)  <= bg_scroll_y;
+SS_VDP1(23 downto 16) <= hbl_counter;
+SS_VDP1(31 downto 24) <= latched_x;
+SS_VDP1(63 downto 32) <= (others => '0');
+
+iREG_SAVESTATE_VDP0 : entity work.eReg_Savestate generic map ( REG_SAVESTATE_VDP0 ) 
+	port map (clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, SaveStateBus_wired_or(0), SS_VDP0, SS_VDP0_BACK);
+iREG_SAVESTATE_VDP1 : entity work.eReg_Savestate generic map ( REG_SAVESTATE_VDP1 ) 
+	port map (clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, SaveStateBus_wired_or(1), SS_VDP1, SS_VDP1_BACK);
+
+SaveStateBus_Dout <= SaveStateBus_wired_or(0) or SaveStateBus_wired_or(1);
 	
-	process (clk_sys, reset_n)
-	variable reset_set: boolean ;
-	begin
-		if reset_n='0' then
-			disable_hscroll<= '0';--36
-			disable_vscroll <= '0';
-			mask_column0	<= '1';--
+process (clk_sys, reset_n)
+variable reset_set: boolean ;
+variable decode_sel : std_logic_vector(5 downto 0);
+begin
+	if reset_n='0' then
+		disable_hscroll<= '0';--36
+		disable_vscroll <= '0';
+		mask_column0	<= '1';--
 			irq_line_en		<= '1';--
 			spr_shift		<= '0';--
 			display_on		<= '0';--80
@@ -277,7 +364,8 @@ begin
 							if D_in(7 downto 6)="00" then
 								xram_cpu_read <= '1';
 							end if;
-							case D_in(7 downto 6)&D_in(3 downto 0) is
+							decode_sel := D_in(7 downto 6) & D_in(3 downto 0);
+							case decode_sel is
 							when "100000" =>
 								disable_vscroll <= xram_cpu_A(7);
 								disable_hscroll<= xram_cpu_A(6);
@@ -353,6 +441,48 @@ begin
 					reset_flags <= false ;
 				end if;
 			end if;
+
+			-- apply savestate writes (one-shot)
+			if SaveStateBus_wren = '1' then
+				if SaveStateBus_Adr = std_logic_vector(to_unsigned(REG_SAVESTATE_VDP0.Adr, SaveStateBus_Adr'length)) then
+					load_vdp0 <= '1';
+				elsif SaveStateBus_Adr = std_logic_vector(to_unsigned(REG_SAVESTATE_VDP1.Adr, SaveStateBus_Adr'length)) then
+					load_vdp1 <= '1';
+				else
+					load_vdp0 <= '0';
+					load_vdp1 <= '0';
+				end if;
+			else
+				load_vdp0 <= '0';
+				load_vdp1 <= '0';
+			end if;
+			if load_vdp0 = '1' then
+				display_on      <= SS_VDP0_BACK(0);
+				disable_hscroll <= SS_VDP0_BACK(1);
+				disable_vscroll <= SS_VDP0_BACK(2);
+				mask_column0    <= SS_VDP0_BACK(3);
+				irq_frame_en    <= SS_VDP0_BACK(4);
+				irq_line_en     <= SS_VDP0_BACK(5);
+				irq_line_count  <= SS_VDP0_BACK(13 downto 6);
+				spr_shift       <= SS_VDP0_BACK(14);
+				spr_tall        <= SS_VDP0_BACK(15);
+				spr_wide        <= SS_VDP0_BACK(16);
+				spr_high_bits   <= SS_VDP0_BACK(19 downto 17);
+				spr_address     <= SS_VDP0_BACK(26 downto 20);
+				overscan        <= SS_VDP0_BACK(30 downto 27);
+				mode_M1         <= SS_VDP0_BACK(31);
+				mode_M2         <= SS_VDP0_BACK(32);
+				mode_M3         <= SS_VDP0_BACK(33);
+				mode_M4         <= SS_VDP0_BACK(34);
+				bg_address      <= SS_VDP0_BACK(38 downto 35);
+				m2mg_address    <= SS_VDP0_BACK(41 downto 39);
+				m2ct_address    <= SS_VDP0_BACK(49 downto 42);
+			end if;
+			if load_vdp1 = '1' then
+				bg_scroll_x <= SS_VDP1_BACK(7 downto 0);
+				bg_scroll_y <= SS_VDP1_BACK(15 downto 8);
+				latched_x   <= SS_VDP1_BACK(31 downto 24);
+			end if;
 		end if;
 	end process;
 
@@ -376,7 +506,9 @@ begin
 	process (clk_sys)
 	begin
 		if rising_edge(clk_sys) then
-			if ce_vdp = '1' then
+			if load_vdp1 = '1' then
+				hbl_counter <= SS_VDP1_BACK(23 downto 16);
+			elsif ce_vdp = '1' then
 				last_x0 <= std_logic(x(0));
 				if x=486 and not (last_x0=std_logic(x(0))) then
 					if y<192 or (y<240 and xmode_M3='1') or (y<224 and xmode_M1='1') or y=511 then

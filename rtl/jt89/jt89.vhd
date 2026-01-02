@@ -14,7 +14,14 @@ port
     ready      : out std_logic;
     mux        : in  std_logic_vector(7 downto 0);
     soundL     : out std_logic_vector(10 downto 0); -- signed
-    soundR     : out std_logic_vector(10 downto 0) -- signed
+    soundR     : out std_logic_vector(10 downto 0); -- signed
+    -- savestates
+    SaveStateBus_Din  : in  std_logic_vector(63 downto 0) := (others => '0');
+    SaveStateBus_Adr  : in  std_logic_vector(9 downto 0) := (others => '0');
+    SaveStateBus_wren : in  std_logic := '0';
+    SaveStateBus_rst  : in  std_logic := '0';
+    SaveStateBus_Dout : out std_logic_vector(63 downto 0);
+    SaveStateBus_index: in  std_logic_vector(9 downto 0) := (others => '0')
 );
 end component;
 

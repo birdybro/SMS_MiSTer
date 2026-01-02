@@ -10,7 +10,14 @@ entity vdp_cram is
 		cpu_D:	in  STD_LOGIC_VECTOR (11 downto 0);
 		vdp_clk:	in  STD_LOGIC;
 		vdp_A:	in  STD_LOGIC_VECTOR (4 downto 0);
-		vdp_D:	out STD_LOGIC_VECTOR (11 downto 0));
+		vdp_D:	out STD_LOGIC_VECTOR (11 downto 0);
+		-- savestate
+		ss_ena: in STD_LOGIC := '0';
+		ss_we:  in STD_LOGIC := '0';
+		ss_A:   in STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
+		ss_D:   in STD_LOGIC_VECTOR(11 downto 0) := (others => '0');
+		ss_Q:   out STD_LOGIC_VECTOR(11 downto 0)
+		);
 end vdp_cram;
 
 architecture Behavioral of vdp_cram is
@@ -24,9 +31,18 @@ begin
 		variable i : integer range 0 to 31;
 	begin
 		if rising_edge(cpu_clk) then
-			if cpu_WE='1'then
-				i := to_integer(unsigned(cpu_A));
-				ram(i) <= cpu_D;
+			if ss_ena='1' then
+				if ss_we='1' then
+					i := to_integer(unsigned(ss_A));
+					ram(i) <= ss_D;
+				end if;
+				ss_Q <= ram(to_integer(unsigned(ss_A)));
+			else
+				if cpu_WE='1'then
+					i := to_integer(unsigned(cpu_A));
+					ram(i) <= cpu_D;
+				end if;
+				ss_Q <= ram(0);
 			end if;
 		end if;
 	end process;

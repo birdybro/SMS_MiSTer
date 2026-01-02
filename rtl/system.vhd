@@ -4,6 +4,8 @@ use IEEE.NUMERIC_STD.ALL;
 --use IEEE.STD_LOGIC_ARITH.ALL;
 -- use IEEE.STD_LOGIC_UNSIGNED.ALL; 
 use work.jt89.all;
+use work.pBus_savestates.all;
+use work.pReg_savestates_sms.all;
 
 entity system is
 	generic (
@@ -117,7 +119,24 @@ entity system is
 		ROMCL  : IN  STD_LOGIC;
 		ROMAD  : IN STD_LOGIC_VECTOR(24 downto 0);
 		ROMDT  : IN STD_LOGIC_VECTOR(7 downto 0);
-		ROMEN  : IN  STD_LOGIC
+		ROMEN  : IN  STD_LOGIC;
+
+		-- savestates
+		SaveStateBus_Din  : in  STD_LOGIC_VECTOR(63 downto 0);
+		SaveStateBus_Adr  : in  STD_LOGIC_VECTOR(9 downto 0);
+		SaveStateBus_wren : in  STD_LOGIC;
+		SaveStateBus_rst  : in  STD_LOGIC;
+		SaveStateBus_Dout : out STD_LOGIC_VECTOR(63 downto 0);
+
+		sleep_savestate   : in  STD_LOGIC;
+		Savestate_VRAMAddr: in  STD_LOGIC_VECTOR(14 downto 0);
+		Savestate_VRAMWrEn: in  STD_LOGIC;
+		Savestate_VRAMWriteData: in STD_LOGIC_VECTOR(7 downto 0);
+		Savestate_VRAMReadData : out STD_LOGIC_VECTOR(7 downto 0);
+		Savestate_CRAMAddr: in STD_LOGIC_VECTOR(5 downto 0);
+		Savestate_CRAMWrEn: in STD_LOGIC;
+		Savestate_CRAMWriteData: in STD_LOGIC_VECTOR(7 downto 0);
+		Savestate_CRAMReadData: out STD_LOGIC_VECTOR(7 downto 0)
 
 	);
 end system;
@@ -163,18 +182,18 @@ architecture Behavioral of system is
 
 	signal boot_rom_D_out:	std_logic_vector(7 downto 0);
 	
-	signal bootloader_n:	std_logic := '0';
+	signal bootloader_n:	std_logic;
 	signal irom_D_out:		std_logic_vector(7 downto 0);
 	signal irom_RD_n:			std_logic := '1';
 
-	signal bank0:				std_logic_vector(7 downto 0) := "00000000";
-	signal bank1:				std_logic_vector(7 downto 0) := "00000001";
-	signal bank2:				std_logic_vector(7 downto 0) := "00000010";
-	signal bank3:				std_logic_vector(7 downto 0) := "00000011";
+	signal bank0:				std_logic_vector(7 downto 0);
+	signal bank1:				std_logic_vector(7 downto 0);
+	signal bank2:				std_logic_vector(7 downto 0);
+	signal bank3:				std_logic_vector(7 downto 0);
   
-	signal vdp_se_bank:		std_logic := '0';
-	signal vdp2_se_bank:		std_logic := '0';
-	signal vdp_cpu_bank:		std_logic := '0';
+	signal vdp_se_bank:		std_logic;
+	signal vdp2_se_bank:		std_logic;
+	signal vdp_cpu_bank:		std_logic;
 	signal rom_bank:			std_logic_vector(3 downto 0) := "0000";
 
 	signal PSG_disable:		std_logic;
@@ -218,6 +237,23 @@ architecture Behavioral of system is
 	signal lock_mapper_B:	std_logic := '0';
 	signal mapper_codies:	std_logic := '0'; -- Ernie Els Golf mapper
 	signal mapper_codies_lock:	std_logic := '0'; 
+	-- savestates
+    type t_SaveStateBus_wired_or is array(0 to 7) of std_logic_vector(63 downto 0);
+    signal SaveStateBus_wired_or : t_SaveStateBus_wired_or;
+    signal SaveStateBus_cpu  : std_logic_vector(63 downto 0);
+    signal SaveStateBus_sys0 : std_logic_vector(63 downto 0);
+    signal SaveStateBus_sys1 : std_logic_vector(63 downto 0);
+	signal SaveStateBus_vdp  : std_logic_vector(63 downto 0);
+	signal SaveStateBus_vdp2 : std_logic_vector(63 downto 0);
+	signal SaveStateBus_psg0 : std_logic_vector(63 downto 0);
+	signal SaveStateBus_psg1 : std_logic_vector(63 downto 0);
+	signal SaveStateBus_fm   : std_logic_vector(63 downto 0);
+	signal SaveStateBus_vdp2_gated : std_logic_vector(63 downto 0);
+	signal SS_SYS0, SS_SYS0_BACK : std_logic_vector(63 downto 0);
+	signal SS_SYS1, SS_SYS1_BACK : std_logic_vector(31 downto 0);
+	signal load_sys0, load_sys1 : std_logic := '0';
+	signal Savestate_VRAMReadData_i : std_logic_vector(7 downto 0);
+	signal Savestate_CRAMReadData_i : std_logic_vector(7 downto 0);
 	
 	signal mapper_msx_check0 : boolean := false ;
 	signal mapper_msx_check1 : boolean := false ;
@@ -313,12 +349,33 @@ begin
 		MREQ_n	=> MREQ_n,
 		IORQ_n	=> IORQ_n,
 		M1_n		=> M1_n,
-		RD_n		=> RD_n,
-		WR_n		=> WR_n,
-		A			=> A,
-		DI			=> GENIE_DI,
-		DO			=> D_in
-	);
+	RD_n		=> RD_n,
+	WR_n		=> WR_n,
+	A			=> A,
+	DI			=> GENIE_DI,
+	DO			=> D_in,
+	-- savestates
+	SaveStateBus_Din  => SaveStateBus_Din,
+	SaveStateBus_Adr  => SaveStateBus_Adr,
+	SaveStateBus_wren => SaveStateBus_wren,
+	SaveStateBus_rst  => SaveStateBus_rst,
+	SaveStateBus_Dout => SaveStateBus_cpu
+);
+
+eREG_SAVESTATE_SYS0 : entity work.eReg_Savestate generic map ( REG_SAVESTATE_SYS0 ) 
+		port map (clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, SaveStateBus_wired_or(1), SaveStateBus_sys0, SS_SYS0_BACK);
+eREG_SAVESTATE_SYS1 : entity work.eReg_Savestate generic map ( REG_SAVESTATE_SYS1 ) 
+		port map (clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, SaveStateBus_wired_or(2), SaveStateBus_sys1(31 downto 0), SS_SYS1_BACK);
+
+	SaveStateBus_wired_or(0) <= SaveStateBus_cpu;
+	SaveStateBus_wired_or(3) <= SaveStateBus_vdp;
+	SaveStateBus_wired_or(4) <= SaveStateBus_vdp2;
+	SaveStateBus_wired_or(5) <= SaveStateBus_psg0;
+	SaveStateBus_wired_or(6) <= SaveStateBus_psg1;
+	SaveStateBus_wired_or(7) <= SaveStateBus_fm;
+	SaveStateBus_vdp2_gated <= SaveStateBus_vdp2 when systeme='1' else (others=>'0');
+
+	SaveStateBus_Dout <= SaveStateBus_wired_or(0) or SaveStateBus_wired_or(1) or SaveStateBus_wired_or(2) or SaveStateBus_wired_or(3) or SaveStateBus_vdp2_gated or SaveStateBus_wired_or(5) or SaveStateBus_wired_or(6) or SaveStateBus_wired_or(7);
 
 	vdp_inst: entity work.vdp
 	generic map(
@@ -328,14 +385,15 @@ begin
 	(
 		clk_sys	=> clk_sys,
 		ce_vdp	=> ce_vdp,
-		ce_pix	=> ce_pix,
-		ce_sp		=> ce_sp,
-		sp64		=> sp64,
-		HL			=> HL,
-		gg			=> gg,
-		ggres			=> ggres,
-		-- Bsg			=> sg,		-- sg1000
-		se_bank	=> vdp_se_bank,
+	ce_pix	=> ce_pix,
+	ce_sp		=> ce_sp,
+	sp64		=> sp64,
+	sleep_savestate => sleep_savestate,
+	HL			=> HL,
+	gg			=> gg,
+	ggres			=> ggres,
+	-- Bsg			=> sg,		-- sg1000
+	se_bank	=> vdp_se_bank,
 		RD_n		=> vdp_RD_n,
 		WR_n		=> vdp_WR_n,
 		IRQ_n		=> vdp_IRQ_n,
@@ -346,16 +404,29 @@ begin
 		D_out		=> vdp_D_out,
 		x			=> x,
 		y			=> y,
-		color		=> vdp_color,
-		palettemode	=> palettemode,
+	color		=> vdp_color,
+	palettemode	=> palettemode,
 --		y1       => vdp_y1,
-		smode_M1  => smode_M1,
-		smode_M2  => smode_M2,
-		smode_M3  => smode_M3,
-		ysj_quirk	=> ysj_quirk,
-		mask_column => mask_column,
-		black_column => black_column,
-		reset_n  => RESET_n
+	smode_M1  => smode_M1,
+	smode_M2  => smode_M2,
+	smode_M3  => smode_M3,
+	ysj_quirk	=> ysj_quirk,
+	mask_column => mask_column,
+	black_column => black_column,
+	reset_n  => RESET_n,
+	Savestate_VRAMAddr => Savestate_VRAMAddr(14 downto 0),
+	Savestate_VRAMWrEn => Savestate_VRAMWrEn,
+	Savestate_VRAMWriteData => Savestate_VRAMWriteData,
+	Savestate_VRAMReadData => Savestate_VRAMReadData_i,
+	Savestate_CRAMAddr => Savestate_CRAMAddr,
+	Savestate_CRAMWrEn => Savestate_CRAMWrEn,
+	Savestate_CRAMWriteData => Savestate_CRAMWriteData,
+	Savestate_CRAMReadData => Savestate_CRAMReadData_i,
+	SaveStateBus_Din  => SaveStateBus_Din,
+	SaveStateBus_Adr  => SaveStateBus_Adr,
+	SaveStateBus_wren => SaveStateBus_wren,
+	SaveStateBus_rst  => SaveStateBus_rst,
+	SaveStateBus_Dout => SaveStateBus_vdp
 	);
 
 	vdp2_inst: entity work.vdp
@@ -366,14 +437,15 @@ begin
 	(
 		clk_sys	=> clk_sys,
 		ce_vdp	=> ce_vdp,
-		ce_pix	=> ce_pix,
-		ce_sp		=> ce_sp,
-		sp64		=> sp64,
-		HL			=> HL,
-		gg			=> gg,
-		ggres			=> ggres,
-		-- Bsg			=> sg,		-- sg1000
-		se_bank	=> vdp2_se_bank,
+	ce_pix	=> ce_pix,
+	ce_sp		=> ce_sp,
+	sp64		=> sp64,
+	sleep_savestate => sleep_savestate,
+	HL			=> HL,
+	gg			=> gg,
+	ggres			=> ggres,
+	-- Bsg			=> sg,		-- sg1000
+	se_bank	=> vdp2_se_bank,
 		RD_n		=> vdp2_RD_n,
 		WR_n		=> vdp2_WR_n,
 		IRQ_n		=> vdp2_IRQ_n,
@@ -384,17 +456,33 @@ begin
 		D_out		=> vdp2_D_out,
 		x			=> x,
 		y			=> y,
-		color		=> vdp2_color,
-		palettemode	=> palettemode,
-		y1       => vdp2_y1,
+	color		=> vdp2_color,
+	palettemode	=> palettemode,
+	y1       => vdp2_y1,
 --		smode_M1  => smode2_M1,
 --		smode_M2  => smode2_M2,
 --		smode_M3  => smode2_M3,
-		ysj_quirk	=> ysj_quirk,
+	ysj_quirk	=> ysj_quirk,
 --		mask_column => mask2_column,
-		black_column => black_column,
-		reset_n  => RESET_n
+	black_column => black_column,
+	reset_n  => RESET_n,
+	Savestate_VRAMAddr => (others => '0'),
+	Savestate_VRAMWrEn => '0',
+	Savestate_VRAMWriteData => (others => '0'),
+	Savestate_VRAMReadData => open,
+	Savestate_CRAMAddr => (others => '0'),
+	Savestate_CRAMWrEn => '0',
+	Savestate_CRAMWriteData => (others => '0'),
+	Savestate_CRAMReadData => open,
+	SaveStateBus_Din  => SaveStateBus_Din,
+	SaveStateBus_Adr  => SaveStateBus_Adr,
+	SaveStateBus_wren => SaveStateBus_wren,
+	SaveStateBus_rst  => SaveStateBus_rst,
+	SaveStateBus_Dout => SaveStateBus_vdp2
 	);
+
+Savestate_VRAMReadData <= Savestate_VRAMReadData_i;
+Savestate_CRAMReadData <= Savestate_CRAMReadData_i;
 
 	psg_inst: jt89
 	port map
@@ -408,7 +496,13 @@ begin
 		soundL	=> PSG_outL,
 		soundR	=> PSG_outR,
 
-		rst		=> not RESET_n
+		rst		=> not RESET_n,
+		SaveStateBus_Din  => SaveStateBus_Din,
+		SaveStateBus_Adr  => SaveStateBus_Adr,
+		SaveStateBus_wren => SaveStateBus_wren,
+		SaveStateBus_rst  => SaveStateBus_rst,
+		SaveStateBus_Dout => SaveStateBus_psg0,
+		SaveStateBus_index=> (others => '0')
 	);
 	
 	psg2_inst: jt89
@@ -423,7 +517,13 @@ begin
 		soundL	=> PSG2_outL,
 		soundR	=> PSG2_outR,
 
-		rst		=> not RESET_n
+		rst		=> not RESET_n,
+		SaveStateBus_Din  => SaveStateBus_Din,
+		SaveStateBus_Adr  => SaveStateBus_Adr,
+		SaveStateBus_wren => SaveStateBus_wren,
+		SaveStateBus_rst  => SaveStateBus_rst,
+		SaveStateBus_Dout => SaveStateBus_psg1,
+		SaveStateBus_index=> "0000000001"
 	);
 	
 	fm: work.opll
@@ -436,7 +536,12 @@ begin
 		cs_n     => '0',
 		we_n		=> '0',
 		ic_n		=> RESET_n,
-		mixout   => FM_out
+		mixout   => FM_out,
+		SaveStateBus_Din  => SaveStateBus_Din,
+		SaveStateBus_Adr  => SaveStateBus_Adr,
+		SaveStateBus_wren => SaveStateBus_wren,
+		SaveStateBus_rst  => SaveStateBus_rst,
+		SaveStateBus_Dout => SaveStateBus_fm
 	);
 	
 	process (clk_sys)
@@ -456,7 +561,7 @@ begin
 -- AMR - Clamped volume boosting - if the top two bits match, truncate the topmost bit.
 -- If the top two bits don't match, duplicate the second bit across the output.
 
-FM_gated <= (others=>'0') when fm_ena='0' or det_D(0)='0' else  -- All zero if FM is disabled
+	FM_gated <= (others=>'0') when fm_ena='0' or det_D(0)='0' else  -- All zero if FM is disabled
 				FM_out(FM_out'high-1 downto 0) when FM_sign=FM_adj else -- Pass through
 				(FM_gated'high=>FM_sign,others=>FM_adj); -- Clamp
 
@@ -475,10 +580,10 @@ mix : entity work.AudioMix
 port map(
 	clk => clk_sys,
 	reset_n => RESET_n,
-	audio_in_l1 => signed(mix_inL & "000"),
-	audio_in_l2 => signed(mix2_inL & "000"),
-	audio_in_r1 => signed(mix_inR & "000"),
-	audio_in_r2 => signed(mix2_inR & "000"),
+	audio_in_l1 => shift_left(resize(signed(mix_inL),16),3),
+	audio_in_l2 => shift_left(resize(signed(mix2_inL),16),3),
+	audio_in_r1 => shift_left(resize(signed(mix_inR),16),3),
+	audio_in_r2 => shift_left(resize(signed(mix2_inR),16),3),
 	std_logic_vector(audio_l) => audioL,
 	std_logic_vector(audio_r) => audioR
 );
@@ -498,10 +603,6 @@ port map(
 		D_in		=> D_in,
 		D_out		=> io_D_out,
 		HL_out	=> HL,
-		vdp1_bank => vdp_se_bank,
-		vdp2_bank => vdp2_se_bank,
-		vdp_cpu_bank => vdp_cpu_bank,
-		rom_bank => rom_bank,
 		J1_tr_out => j1_tr_out,
 		J1_th_out => j1_th_out,
 		J2_tr_out => j2_tr_out,
@@ -621,20 +722,39 @@ port map(
 	rom_RD   <= not RD_n when MREQ_n='0' and A(15 downto 14)/="11" else '0';
 	color    <= vdp2_color when (vdp2_y1='1' and systeme='1' and vdp_enables(1)='0') else vdp_color when vdp_enables(0)='0' else x"000";
 
-	process (clk_sys)
-	begin
-		if rising_edge(clk_sys) then
-			if RESET_n='0' then 
-				bootloader_n <= not bios_en;
-			elsif ctl_WR_n='0' and bootloader_n='0' then
-				bootloader_n <= '1';
-			end if;
-		end if;
-	end process;
-	
 	irom_D_out <=	boot_rom_D_out when bootloader_n='0' and A(15 downto 14)="00"
 	               else segadect2_D_out when (encrypt(1 downto 0)="10" and A(15)='0')
 						else mc8123_D_out when (encrypt(0)='1' and A(15)='0') or (encrypt(1 downto 0)="11" and A(14)='0') else rom_do;
+
+	-- savestates: pack live system state for save
+	SaveStateBus_sys0(7 downto 0)   <= bank0;
+	SaveStateBus_sys0(15 downto 8)  <= bank1;
+	SaveStateBus_sys0(23 downto 16) <= bank2;
+	SaveStateBus_sys0(31 downto 24) <= bank3;
+	SaveStateBus_sys0(32)           <= nvram_e;
+	SaveStateBus_sys0(33)           <= nvram_ex;
+	SaveStateBus_sys0(34)           <= nvram_p;
+	SaveStateBus_sys0(35)           <= nvram_cme;
+	SaveStateBus_sys0(36)           <= lock_mapper_B;
+	SaveStateBus_sys0(37)           <= mapper_codies;
+	SaveStateBus_sys0(38)           <= mapper_codies_lock;
+	SaveStateBus_sys0(39)           <= bootloader_n;
+	SaveStateBus_sys0(40)           <= vdp_se_bank;
+	SaveStateBus_sys0(41)           <= vdp2_se_bank;
+	SaveStateBus_sys0(42)           <= vdp_cpu_bank;
+	SaveStateBus_sys0(46 downto 43) <= rom_bank;
+	SaveStateBus_sys0(63 downto 47) <= (others => '0');
+
+	SaveStateBus_sys1(7 downto 0)   <= PSG_mux;
+	SaveStateBus_sys1(10 downto 8)  <= det_D;
+	SaveStateBus_sys1(11)           <= '1' when mapper_msx='1' else '0';
+	SaveStateBus_sys1(12)           <= '1' when mapper_msx_lock else '0';
+	SaveStateBus_sys1(13)           <= '1' when mapper_msx_check0 else '0';
+	SaveStateBus_sys1(14)           <= '1' when mapper_msx_check1 else '0';
+	SaveStateBus_sys1(15)           <= '1' when mapper_msx_lock0 else '0';
+	SaveStateBus_sys1(23 downto 16) <= (others => '0');
+	SaveStateBus_sys1(31 downto 24) <= (others => '0');
+	SaveStateBus_sys1(63 downto 32) <= (others => '0');
 	
 	process (clk_sys)
 	begin
@@ -642,10 +762,33 @@ port map(
 			if RESET_n='0' then 
 				det_D <= "111";
 				PSG_mux <= x"FF";
+				load_sys0 <= '0';
+				load_sys1 <= '0';
 			elsif det_WR_n='0' then
 				det_D <= D_in(2 downto 0);
 			elsif bal_WR_n='0' then
 				PSG_mux <= D_in;
+			end if;
+
+			-- apply savestate writes
+			if SaveStateBus_wren = '1' then
+				if SaveStateBus_Adr = std_logic_vector(to_unsigned(REG_SAVESTATE_SYS0.Adr, SaveStateBus_Adr'length)) then
+					load_sys0 <= '1';
+				end if;
+				if SaveStateBus_Adr = std_logic_vector(to_unsigned(REG_SAVESTATE_SYS1.Adr, SaveStateBus_Adr'length)) then
+					load_sys1 <= '1';
+				end if;
+			else
+				load_sys0 <= '0';
+				load_sys1 <= '0';
+			end if;
+			if load_sys0 = '1' then
+				load_sys0 <= '0';
+			end if;
+			if load_sys1 = '1' then
+				load_sys1 <= '0';
+				PSG_mux <= SS_SYS1_BACK(7 downto 0);
+				det_D   <= SS_SYS1_BACK(10 downto 8);
 			end if;
 		end if;
 	end process;
@@ -685,41 +828,47 @@ port map(
 	end process;
 
 	-- detect MSX mapper : we check the two first bytes of the rom, must be 41:42
-	process (RESET_n, clk_sys)
-	begin
-		if RESET_n='0' then
-			mapper_msx_check0 <= false ;
-			mapper_msx_check1 <= false ;
-			mapper_msx_lock0 <= false ;
-			mapper_msx_lock <= false ;
-			mapper_msx <= '0' ;
-		else
-			if rising_edge(clk_sys) then
-				if bootloader_n='1' and not mapper_msx_lock then 
-					if MREQ_n='0' then 
-					-- in this state, A is stable but not D_out
-						if A=x"0000" then
-							mapper_msx_check0 <= (D_out=x"41") ;
-						elsif A=x"0001" then
-							mapper_msx_check1 <= (D_out=x"42") ;
-							mapper_msx_lock0 <= true ;
-						end if;
-					else
-					-- this state is similar to old_MREQ_n
-					-- now we can lock values depending on D_out
-						if mapper_msx_check0 and mapper_msx_check1 then
-							mapper_msx <= '1'; -- if 4142 lock msx mapper on
-						end if;
-						-- be paranoid : give only 1 chance to the mapper to lock on
-						mapper_msx_lock <= mapper_msx_lock0 ; 
+process (RESET_n, clk_sys)
+begin
+	if RESET_n='0' then
+		mapper_msx_check0 <= false ;
+		mapper_msx_check1 <= false ;
+		mapper_msx_lock0 <= false ;
+		mapper_msx_lock <= false ;
+		mapper_msx <= '0' ;
+	else
+		if rising_edge(clk_sys) then
+			if load_sys1 = '1' then
+				mapper_msx <= SS_SYS1_BACK(11);
+				mapper_msx_lock <= (SS_SYS1_BACK(12)='1');
+				mapper_msx_check0 <= (SS_SYS1_BACK(13)='1');
+				mapper_msx_check1 <= (SS_SYS1_BACK(14)='1');
+				mapper_msx_lock0 <= (SS_SYS1_BACK(15)='1');
+			elsif bootloader_n='1' and not mapper_msx_lock then 
+				if MREQ_n='0' then 
+				-- in this state, A is stable but not D_out
+					if A=x"0000" then
+						mapper_msx_check0 <= (D_out=x"41") ;
+					elsif A=x"0001" then
+						mapper_msx_check1 <= (D_out=x"42") ;
+						mapper_msx_lock0 <= true ;
 					end if;
+				else
+				-- this state is similar to old_MREQ_n
+				-- now we can lock values depending on D_out
+					if mapper_msx_check0 and mapper_msx_check1 then
+						mapper_msx <= '1'; -- if 4142 lock msx mapper on
+					end if;
+					-- be paranoid : give only 1 chance to the mapper to lock on
+					mapper_msx_lock <= mapper_msx_lock0 ; 
 				end if;
 			end if;
 		end if;
-	end process;
+	end if;
+end process;
 	
-	-- external ram control
-	process (RESET_n,clk_sys)
+	-- external ram control (mappers, banks, nvram, bootloader)
+	process (RESET_n,clk_sys,bios_en)
 	begin
 		if RESET_n='0' then
 			bank0 <= "00000000";
@@ -733,73 +882,109 @@ port map(
 			lock_mapper_B <= '0' ;
 			mapper_codies <= '0' ;
 			mapper_codies_lock <= '0' ;
+			bootloader_n <= not bios_en;
+			vdp_se_bank  <= '0';
+			vdp2_se_bank <= '0';
+			vdp_cpu_bank <= '0';
+			rom_bank     <= (others => '0');
 		else
 			if rising_edge(clk_sys) then
-				if WR_n='1' and MREQ_n='0' then
-					last_read_addr <= A; -- gyurco anti-ldir patch
-				end if;
-				if systeme = '1' then
-					-- no systeme mappers
-				elsif mapper_msx = '1' then
-					if WR_n='0' and A(15 downto 2)="00000000000000" then
-						case A(1 downto 0) is
-							when "00" => bank2 <= D_in;
-							when "01" => bank3 <= D_in;
-							when "10" => bank0 <= D_in;
-							when "11" => bank1 <= D_in ; 
-						end case;
-					end if ;
+				if load_sys0 = '1' then
+					bank0 <= SS_SYS0_BACK(7 downto 0);
+					bank1 <= SS_SYS0_BACK(15 downto 8);
+					bank2 <= SS_SYS0_BACK(23 downto 16);
+					bank3 <= SS_SYS0_BACK(31 downto 24);
+					nvram_e  <= SS_SYS0_BACK(32);
+					nvram_ex <= SS_SYS0_BACK(33);
+					nvram_p  <= SS_SYS0_BACK(34);
+					nvram_cme <= SS_SYS0_BACK(35);
+					lock_mapper_B <= SS_SYS0_BACK(36);
+					mapper_codies <= SS_SYS0_BACK(37);
+					mapper_codies_lock <= SS_SYS0_BACK(38);
+					bootloader_n <= SS_SYS0_BACK(39);
+					vdp_se_bank  <= SS_SYS0_BACK(40);
+					vdp2_se_bank <= SS_SYS0_BACK(41);
+					vdp_cpu_bank <= SS_SYS0_BACK(42);
+					rom_bank     <= SS_SYS0_BACK(46 downto 43);
 				else
-					if WR_n='0' and A(15 downto 2)="11111111111111" then
-						mapper_codies <= '0' ;
-						case A(1 downto 0) is
-							when "00" => 
-								nvram_ex <= D_in(4);
-								nvram_e  <= D_in(3);
-								nvram_p  <= D_in(2);
-							when "01" => bank0 <= D_in;
-							when "10" => bank1 <= D_in;
-							when "11" => bank2 <= D_in ; 
-						end case;
+					if WR_n='1' and MREQ_n='0' then
+						last_read_addr <= A; -- gyurco anti-ldir patch
 					end if;
-					if WR_n='0' and nvram_e='0' and mapper_lock='0' then
-						case A(15 downto 0) is
-				-- Codemasters
-				-- do not accept writing in adr $0000 (canary) unless we are sure that Codemasters mapper is in use
-							when x"0000" => 
-								if (lock_mapper_B='1') then 
-									bank0 <= D_in ;  
-								-- we need a strong criteria to set mapper_codies, hopefully only Ernie Els Golf
-								-- will have written a zero in $4000 before coming here
-									if D_in /= "00000000" and mapper_codies_lock = '0' then
-										if bank1 = "00000001" then
-											mapper_codies <= '1' ;
+					if ctl_WR_n='0' and bootloader_n='0' then
+						bootloader_n <= '1';
+					end if;
+					if systeme='1' and io_WR_n='0' and A(7 downto 0)=x"F7" then
+						vdp_se_bank  <= D_in(7);
+						vdp2_se_bank <= D_in(6);
+						vdp_cpu_bank <= D_in(5);
+						rom_bank     <= D_in(3 downto 0);
+					end if;
+					if systeme = '1' then
+						-- no systeme mappers
+					elsif mapper_msx = '1' then
+						if WR_n='0' and A(15 downto 2)="00000000000000" then
+							case A(1 downto 0) is
+								when "00" => bank2 <= D_in;
+								when "01" => bank3 <= D_in;
+								when "10" => bank0 <= D_in;
+								when "11" => bank1 <= D_in ; 
+							end case;
+						end if ;
+					else
+						if WR_n='0' and A(15 downto 2)="11111111111111" then
+							mapper_codies <= '0' ;
+							case A(1 downto 0) is
+								when "00" => 
+									nvram_ex <= D_in(4);
+									nvram_e  <= D_in(3);
+									nvram_p  <= D_in(2);
+								when "01" => bank0 <= D_in;
+								when "10" => bank1 <= D_in;
+								when "11" => bank2 <= D_in ; 
+							end case;
+						end if;
+						if WR_n='0' and nvram_e='0' and mapper_lock='0' then
+							case A(15 downto 0) is
+					-- Codemasters
+					-- do not accept writing in adr $0000 (canary) unless we are sure that Codemasters mapper is in use
+								when x"0000" => 
+									if (lock_mapper_B='1') then 
+										bank0 <= D_in ;  
+									-- we need a strong criteria to set mapper_codies, hopefully only Ernie Els Golf
+									-- will have written a zero in $4000 before coming here
+										if D_in /= "00000000" and mapper_codies_lock = '0' then
+											if bank1 = "00000001" then
+												mapper_codies <= '1' ;
+											end if;
+											mapper_codies_lock <= '1' ;
 										end if;
-										mapper_codies_lock <= '1' ;
 									end if;
-								end if;
-							when x"4000" => 
-								if last_read_addr /= x"4000" then -- gyurco anti-ldir patch
-									bank1(6 downto 0) <= D_in(6 downto 0) ;
-									bank1(7) <= '0' ;
-								-- mapper_codies <= mapper_codies or D_in(7) ;
-									nvram_cme <= D_in(7) ;
-									lock_mapper_B <= '1' ;
-								end if ;
-							when x"8000" => 
-								if last_read_addr /= x"8000" then -- gyurco anti-ldir patch
-									bank2 <= D_in ; 
-									lock_mapper_B <= '1' ;
-								end if;
-					-- Korean mapper (Sangokushi 3, Dodgeball King)
-							when x"A000" => 
-								if last_read_addr /= x"A000" then -- gyurco anti-ldir patch
-									if mapper_codies='0' then
-										bank2 <= D_in ;
+								when x"4000" => 
+									if last_read_addr /= x"4000" then -- gyurco anti-ldir patch
+										bank1(6 downto 0) <= D_in(6 downto 0) ;
+										bank1(7) <= '0' ;
+									-- mapper_codies <= mapper_codies or D_in(7) ;
+										nvram_cme <= D_in(7) ;
+										lock_mapper_B <= '1' ;
 									end if ;
-								end if ;
-							when others => null ;
-						end case ;
+								when x"8000" => 
+									if last_read_addr /= x"8000" then -- gyurco anti-ldir patch
+										bank2 <= D_in ; 
+										lock_mapper_B <= '1' ;
+									end if;
+						-- Korean mapper (Sangokushi 3, Dodgeball King)
+								when x"A000" => 
+									if last_read_addr /= x"A000" then -- gyurco anti-ldir patch
+										if mapper_codies='0' then
+											bank2 <= D_in ;
+										end if ;
+									end if ;
+								when others => null ;
+							end case ;
+						end if;
+						if WR_n='0' and A(15 downto 14)="11" then
+							nvram_cme <= D_in(7); 
+						end if;
 					end if;
 				end if;
 			end if;

@@ -211,6 +211,15 @@ wire flip = status[42];
 wire rotate_ccw = 0;
 wire [5:0] arx, ary;
 
+// screen rotation DDRAM interface
+wire        rot_DDRAM_CLK;
+wire [7:0]  rot_DDRAM_BURSTCNT;
+wire [28:0] rot_DDRAM_ADDR;
+wire [63:0] rot_DDRAM_DIN;
+wire [7:0]  rot_DDRAM_BE;
+wire        rot_DDRAM_WE;
+wire        rot_DDRAM_RD;
+
 always_comb begin
 	if (no_rotate) begin
 		if (gg) begin
@@ -238,7 +247,37 @@ end
 
 wire [1:0] ar = status[27:26];
 wire vga_de;
-screen_rotate screen_rotate (.*);
+screen_rotate screen_rotate
+(
+	.CLK_VIDEO   (CLK_VIDEO),
+	.CE_PIXEL    (CE_PIXEL),
+	.VGA_R       (VGA_R),
+	.VGA_G       (VGA_G),
+	.VGA_B       (VGA_B),
+	.VGA_HS      (VGA_HS),
+	.VGA_VS      (VGA_VS),
+	.VGA_DE      (VGA_DE),
+	.rotate_ccw  (rotate_ccw),
+	.no_rotate   (no_rotate),
+	.flip        (flip),
+	.video_rotated(video_rotated),
+	.FB_EN       (FB_EN),
+	.FB_FORMAT   (FB_FORMAT),
+	.FB_WIDTH    (FB_WIDTH),
+	.FB_HEIGHT   (FB_HEIGHT),
+	.FB_BASE     (FB_BASE),
+	.FB_STRIDE   (FB_STRIDE),
+	.FB_VBL      (FB_VBL),
+	.FB_LL       (FB_LL),
+	.DDRAM_CLK   (rot_DDRAM_CLK),
+	.DDRAM_BUSY  (DDRAM_BUSY),
+	.DDRAM_BURSTCNT(rot_DDRAM_BURSTCNT),
+	.DDRAM_ADDR  (rot_DDRAM_ADDR),
+	.DDRAM_DIN   (rot_DDRAM_DIN),
+	.DDRAM_BE    (rot_DDRAM_BE),
+	.DDRAM_WE    (rot_DDRAM_WE),
+	.DDRAM_RD    (rot_DDRAM_RD)
+);
 video_freak video_freak
 (
 	.*,
@@ -261,6 +300,7 @@ video_freak video_freak
 `include "build_id.v"
 parameter CONF_STR = {
 	"SMS;;",
+	"SS3E000000:40000;",
 	"-;",
 	"H8FS1,SMSSG;",
 	"H8FS2,GG;",
@@ -431,6 +471,8 @@ wire        forced_scandoubler;
 wire [21:0] gamma_bus;
 
 wire [24:0] ps2_mouse;
+wire        ss_info_req;
+wire  [7:0] ss_info;
 
 hps_io #(.CONF_STR(CONF_STR), .WIDE(0)) hps_io
 (
@@ -477,7 +519,10 @@ hps_io #(.CONF_STR(CONF_STR), .WIDE(0)) hps_io
 	.img_readonly(img_readonly),
 	.img_size(img_size),
 
-	.ps2_mouse(ps2_mouse)
+	.ps2_mouse(ps2_mouse),
+
+	.info_req(ss_info_req),
+	.info(ss_info)
 );
 
 wire [21:0] ram_addr;
@@ -777,7 +822,22 @@ system #(63) system
 	.ROMCL(clk_sys),
 	.ROMAD(ioctl_addr),
 	.ROMDT(ioctl_dout),
-	.ROMEN(ioctl_wr & ioctl_index==0)
+	.ROMEN(ioctl_wr & ioctl_index==0),
+	// savestates
+	.SaveStateBus_Din  (SaveStateBus_Din),
+	.SaveStateBus_Adr  (SaveStateBus_Adr),
+	.SaveStateBus_wren (SaveStateBus_wren),
+	.SaveStateBus_rst  (SaveStateBus_rst),
+	.SaveStateBus_Dout (SaveStateBus_Dout),
+	.sleep_savestate   (sleep_savestate),
+	.Savestate_VRAMAddr(ss_ram_addr[14:0]),
+	.Savestate_VRAMWrEn(ss_ram_wren[1]),
+	.Savestate_VRAMWriteData(ss_ram_wdata),
+	.Savestate_VRAMReadData(ss_ram_rdata_vram),
+	.Savestate_CRAMAddr(Savestate_CRAMAddr),
+	.Savestate_CRAMWrEn(Savestate_CRAMWrEn),
+	.Savestate_CRAMWriteData(Savestate_CRAMWriteData),
+	.Savestate_CRAMReadData(Savestate_CRAMReadData)
 );
 
 wire [12:0] key_a;
@@ -801,6 +861,9 @@ assign joy[0] = status[1] ? joy_1[7:0] : joy_0[7:0];
 assign joy[1] = status[1] ? joy_0[7:0] : joy_1[7:0];
 assign joy[2] = joy_2[7:0];
 assign joy[3] = joy_3[7:0];
+
+// raw joystick bits for savestate UI (extend to 11 bits, unused upper bits zero)
+wire [10:0] joy0_unmod = {3'b000, joy[0]};
 
 wire raw_serial = status[16];
 wire pause_combo = status[17];
@@ -894,14 +957,22 @@ always @(posedge clk_sys) begin
 	end
 end
 
+wire [13:0] ram_addr_mux = sleep_savestate ? ss_ram_addr[13:0] : (systeme ? ram_a : {1'b0,ram_a[12:0]});
+wire        ram_we_mux   = sleep_savestate ? ss_ram_wren[0]    : ram_we;
+wire [7:0]  ram_d_mux    = sleep_savestate ? ss_ram_wdata      : ram_d;
+wire [7:0]  ram_q_int;
+
 spram #(.widthad_a(14)) ram_inst
 (
 	.clock     (clk_sys),
-	.address   (systeme ? ram_a : {1'b0,ram_a[12:0]}),
-	.wren      (ram_we),
-	.data      (ram_d),
-	.q         (ram_q)
+	.address   (ram_addr_mux),
+	.wren      (ram_we_mux),
+	.data      (ram_d_mux),
+	.q         (ram_q_int)
 );
+
+assign ram_q = ram_q_int;
+assign ss_ram_rdata_wram = ram_q_int;
 
 wire [15:0] audio_l, audio_r;
 
@@ -924,6 +995,37 @@ wire pal = status[2];
 wire border = status[13] & ~gg;
 wire ggres = ~status[39] & gg;
 wire turbo = status[40];
+
+///////////////////////////// savestates /////////////////////////////////
+
+wire [63:0] SaveStateBus_Din; 
+wire [9:0]  SaveStateBus_Adr; 
+wire        SaveStateBus_wren;
+wire        SaveStateBus_rst; 
+wire [63:0] SaveStateBus_Dout;
+wire        savestate_load;
+
+wire [15:0] ss_ram_addr;
+wire [3:0]  ss_ram_wren;
+wire [7:0]  ss_ram_wdata;
+wire [7:0]  ss_ram_rdata_wram;
+wire [7:0]  ss_ram_rdata_vram;
+wire [7:0]  ss_ram_rdata_nvram;
+wire [5:0]  Savestate_CRAMAddr;
+wire        Savestate_CRAMWrEn;
+wire [7:0]  Savestate_CRAMWriteData;
+wire [7:0]  Savestate_CRAMReadData;
+assign Savestate_CRAMAddr = ss_ram_addr[5:0];
+assign Savestate_CRAMWrEn = ss_ram_wren[2];
+assign Savestate_CRAMWriteData = ss_ram_wdata;
+
+wire [63:0] ss_dout, ss_din;
+wire [25:0] ss_addr;
+wire  [7:0] ss_be;
+wire        ss_rnw, ss_req, ss_ack;
+
+wire [1:0] ss_slot;
+wire ss_save, ss_load;
 
 video video
 (
@@ -952,29 +1054,36 @@ reg ce_sp;
 always @(negedge clk_sys) begin
 	reg [4:0] clkd;
 
-	ce_sp <= clkd[0];
-	ce_vdp <= 0;//div5
-	ce_pix <= 0;//div10
-	ce_cpu <= 0;//div15
-	clkd <= clkd + 1'd1;
-	if (clkd==29) begin
-		clkd <= 0;
-		ce_vdp <= 1;
-		ce_pix <= 1;
-	end else if (clkd==24) begin
-		ce_cpu <= 1;  //-- changed cpu phase to please VDPTEST HCounter test;
-		ce_vdp <= 1;
-	end else if (clkd==19) begin
-		ce_vdp <= 1;
-		ce_pix <= 1;
-	end else if (clkd==14) begin
-		ce_vdp <= 1;
-	end else if (clkd==9) begin
-		ce_cpu <= 1;
-		ce_vdp <= 1;
-		ce_pix <= 1;
-	end else if (clkd==4) begin
-		ce_vdp <= 1;
+	if (sleep_savestate) begin
+		ce_sp  <= 0;
+		ce_vdp <= 0;
+		ce_pix <= 0;
+		ce_cpu <= 0;
+	end else begin
+		ce_sp <= clkd[0];
+		ce_vdp <= 0;//div5
+		ce_pix <= 0;//div10
+		ce_cpu <= 0;//div15
+		clkd <= clkd + 1'd1;
+		if (clkd==29) begin
+			clkd <= 0;
+			ce_vdp <= 1;
+			ce_pix <= 1;
+		end else if (clkd==24) begin
+			ce_cpu <= 1;  //-- changed cpu phase to please VDPTEST HCounter test;
+			ce_vdp <= 1;
+		end else if (clkd==19) begin
+			ce_vdp <= 1;
+			ce_pix <= 1;
+		end else if (clkd==14) begin
+			ce_vdp <= 1;
+		end else if (clkd==9) begin
+			ce_cpu <= 1;
+			ce_vdp <= 1;
+			ce_pix <= 1;
+		end else if (clkd==4) begin
+			ce_vdp <= 1;
+		end
 	end
 end
 
@@ -1006,6 +1115,133 @@ video_mixer #(.HALF_DEPTH(1), .LINE_LENGTH(300), .GAMMA(1)) video_mixer
 	.B((gun_en & gun_target && (~&gun_crosshair)) ? 8'd0   : {2{color[11:8]}})
 );
 
+///////////////////////////// savestate pipeline /////////////////////////////
+
+wire [31:0] savestate_address;
+wire        savestate_request_save;
+wire        savestate_request_load;
+wire        savestate_busy;
+wire        sleep_savestate;
+wire        statusUpdate;
+
+// DDRAM arbitration: rotation buffer vs savestate engine
+wire [7:0]  ddram_burstcnt;
+wire [28:0] ddram_addr;
+wire [63:0] ddram_din;
+wire [7:0]  ddram_be;
+wire        ddram_we;
+wire        ddram_rd;
+wire        use_rot_bus = video_rotated & ~ss_req;
+
+savestate_ui savestate_ui
+(
+	.clk            (clk_sys       ),
+	.ps2_key        (ps2_key[10:0] ),
+	.allow_ss       (~cart_download),
+	.joySS          (joy0_unmod[9] ),
+	.joyRight       (joy0_unmod[0] ),
+	.joyLeft        (joy0_unmod[1] ),
+	.joyDown        (joy0_unmod[2] ),
+	.joyUp          (joy0_unmod[3] ),
+	.joyStart       (joy0_unmod[7] ),
+	.joyRewind      (joy0_unmod[10]),
+	.rewindEnable   (1'b0          ), 
+	.status_slot    (status[33:32] ),
+	.OSD_saveload   (status[29:28] ),
+	.ss_save        (ss_save       ),
+	.ss_load        (ss_load       ),
+	.ss_info_req    (ss_info_req   ),
+	.ss_info        (ss_info       ),
+	.statusUpdate   (statusUpdate  ),
+	.selected_slot  (ss_slot       )
+);
+defparam savestate_ui.INFO_TIMEOUT_BITS = 27;
+
+sms_statemanager #(32'h3E000000, 32'h00010000) sms_statemanager
+(
+   .clk               (clk_sys),
+   .reset             (reset),
+   .savestate_number  (ss_slot),
+   .save              (ss_save),
+   .load              (ss_load),
+   .request_savestate (savestate_request_save),
+   .request_loadstate (savestate_request_load),
+   .request_address   (savestate_address),
+   .request_busy      (savestate_busy)
+);
+
+sms_savestates sms_savestates (
+   .clk                    (clk_sys),
+   .reset_in               (reset),
+   .reset_out              (       ),
+   
+   .load_done              (savestate_load),
+   
+   .increaseSSHeaderCount  (1'b1),
+   .save                   (savestate_request_save),
+   .load                   (savestate_request_load),
+   .savestate_address      (savestate_address),
+   .savestate_busy         (savestate_busy),      
+   
+   .nvram_size             (16'h8000),
+   
+   .vsync                  (VS),
+   
+   .BUS_Din                (SaveStateBus_Din), 
+   .BUS_Adr                (SaveStateBus_Adr), 
+   .BUS_wren               (SaveStateBus_wren), 
+   .BUS_rst                (SaveStateBus_rst), 
+   .BUS_Dout               (SaveStateBus_Dout),
+      
+   .sleep_savestate        (sleep_savestate),
+   .clock_ena_in           (ce_pix),
+   
+   .Save_RAMAddr           (ss_ram_addr),     
+   .Save_RAMWrEn           (ss_ram_wren),           
+   .Save_RAMWriteData      (ss_ram_wdata),   
+   .Save_RAMReadData_WRAM  (ss_ram_rdata_wram),
+   .Save_RAMReadData_VRAM  (ss_ram_rdata_vram),
+   .Save_RAMReadData_CRAM  (Savestate_CRAMReadData),
+   .Save_RAMReadData_NVRAM (ss_ram_rdata_nvram),
+            
+   .bus_out_Din            (ss_din),   
+   .bus_out_Dout           (ss_dout),  
+   .bus_out_Adr            (ss_addr),   
+   .bus_out_rnw            (ss_rnw),   
+   .bus_out_ena            (ss_req),   
+   .bus_out_be             (ss_be),   
+   .bus_out_done           (ss_ack)  
+);
+
+assign DDRAM_CLK      = clk_sys;
+assign DDRAM_BURSTCNT = use_rot_bus ? rot_DDRAM_BURSTCNT : ddram_burstcnt;
+assign DDRAM_ADDR     = use_rot_bus ? rot_DDRAM_ADDR     : ddram_addr;
+assign DDRAM_DIN      = use_rot_bus ? rot_DDRAM_DIN      : ddram_din;
+assign DDRAM_BE       = use_rot_bus ? rot_DDRAM_BE       : ddram_be;
+assign DDRAM_WE       = use_rot_bus ? rot_DDRAM_WE       : ddram_we;
+assign DDRAM_RD       = use_rot_bus ? rot_DDRAM_RD       : ddram_rd;
+
+ddram ddram
+(
+	.DDRAM_CLK       (clk_sys),
+	.DDRAM_BUSY      (DDRAM_BUSY),
+	.DDRAM_BURSTCNT  (ddram_burstcnt),
+	.DDRAM_ADDR      (ddram_addr),
+	.DDRAM_DOUT      (DDRAM_DOUT),
+	.DDRAM_DOUT_READY(DDRAM_DOUT_READY),
+	.DDRAM_RD        (ddram_rd),
+	.DDRAM_DIN       (ddram_din),
+	.DDRAM_BE        (ddram_be),
+	.DDRAM_WE        (ddram_we),
+	.ch1_addr        ({1'b0, ss_addr}),
+	.ch1_dout        (ss_dout),
+	.ch1_din         (ss_din),
+	.ch1_req         (ss_req),
+	.ch1_rnw         (ss_rnw),
+	.ch1_be          (ss_be),
+	.ch1_ready       (ss_ack)
+);
+
 
 /////////////////////////  STATE SAVE/LOAD  /////////////////////////////
 wire bk_save_write = nvram_we;
@@ -1018,19 +1254,27 @@ always @(posedge clk_sys) begin
 		bk_pending <= 1'b0;
 end
 
+wire [14:0] nvram_addr_mux = sleep_savestate ? ss_ram_addr[14:0] : nvram_a;
+wire        nvram_we_mux   = sleep_savestate ? ss_ram_wren[3]    : nvram_we;
+wire [7:0]  nvram_d_mux    = sleep_savestate ? ss_ram_wdata      : nvram_d;
+wire [7:0]  nvram_q_int;
+
 dpram #(.widthad_a(15)) nvram_inst
 (
 	.clock_a     (clk_sys),
-	.address_a   (nvram_a),
-	.wren_a      (nvram_we),
-	.data_a      (nvram_d),
-	.q_a         (nvram_q),
+	.address_a   (nvram_addr_mux),
+	.wren_a      (nvram_we_mux),
+	.data_a      (nvram_d_mux),
+	.q_a         (nvram_q_int),
 	.clock_b     (clk_sys),
 	.address_b   ({sd_lba[5:0],sd_buff_addr}),
 	.wren_b      (sd_buff_wr & sd_ack),
 	.data_b      (sd_buff_dout),
 	.q_b         (sd_buff_din)
 );
+
+assign nvram_q = nvram_q_int;
+assign ss_ram_rdata_nvram = nvram_q_int;
 
 wire downloading = cart_download;
 reg old_downloading = 0;

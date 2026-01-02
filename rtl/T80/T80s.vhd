@@ -68,6 +68,8 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
+use work.pBus_savestates.all;
+use work.pReg_savestates_sms.all;
 
 entity T80s is
 	generic(
@@ -94,7 +96,14 @@ entity T80s is
 		OUT0        : in  std_logic := '0';  -- 0 => OUT(C),0, 1 => OUT(C),255
 		A				: out std_logic_vector(15 downto 0);
 		DI				: in std_logic_vector(7 downto 0);
-		DO				: out std_logic_vector(7 downto 0)
+		DO				: out std_logic_vector(7 downto 0);
+
+		-- savestates
+		SaveStateBus_Din  : in  std_logic_vector(63 downto 0) := (others => '0');
+		SaveStateBus_Adr  : in  std_logic_vector(9 downto 0)  := (others => '0');
+		SaveStateBus_wren : in  std_logic := '0';
+		SaveStateBus_rst  : in  std_logic := '0';
+		SaveStateBus_Dout : out std_logic_vector(63 downto 0) := (others => '0')
 	);
 end T80s;
 
@@ -108,7 +117,45 @@ architecture rtl of T80s is
 	signal MCycle		: std_logic_vector(2 downto 0);
 	signal TState		: std_logic_vector(2 downto 0);
 
+	-- savestates
+	type t_reg_wired_or is array(0 to 3) of std_logic_vector(63 downto 0);
+	signal reg_wired_or : t_reg_wired_or;
+	signal SS_CPU0, SS_CPU1, SS_CPU2, SS_CPU3     : std_logic_vector(63 downto 0);
+	signal SS_CPU0_BACK, SS_CPU1_BACK, SS_CPU2_BACK, SS_CPU3_BACK : std_logic_vector(63 downto 0);
+	signal CPU_REG       : std_logic_vector(211 downto 0);
+	signal CPU_DIR       : std_logic_vector(211 downto 0);
+	signal DIRSet        : std_logic := '0';
+
 begin
+
+	-- CPU register capture (live -> bus)
+	SS_CPU0 <= CPU_REG( 63 downto   0);
+	SS_CPU1 <= CPU_REG(127 downto  64);
+	SS_CPU2 <= CPU_REG(191 downto 128);
+	SS_CPU3 <= (others => '0') when CPU_REG'length < 192 else
+	            std_logic_vector(to_unsigned(0,44)) & CPU_REG(211 downto 192);
+
+	-- savestate register storage
+	iREG_SAVESTATE_CPU0 : entity work.eReg_Savestate generic map ( REG_SAVESTATE_CPU0 ) 
+		port map (CLK, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, reg_wired_or(0), SS_CPU0, SS_CPU0_BACK);
+	iREG_SAVESTATE_CPU1 : entity work.eReg_Savestate generic map ( REG_SAVESTATE_CPU1 ) 
+		port map (CLK, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, reg_wired_or(1), SS_CPU1, SS_CPU1_BACK);
+	iREG_SAVESTATE_CPU2 : entity work.eReg_Savestate generic map ( REG_SAVESTATE_CPU2 ) 
+		port map (CLK, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, reg_wired_or(2), SS_CPU2, SS_CPU2_BACK);
+	iREG_SAVESTATE_CPU3 : entity work.eReg_Savestate generic map ( REG_SAVESTATE_CPU3 ) 
+		port map (CLK, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren, SaveStateBus_rst, reg_wired_or(3), SS_CPU3, SS_CPU3_BACK);
+
+	SaveStateBus_Dout <= reg_wired_or(0) or reg_wired_or(1) or reg_wired_or(2) or reg_wired_or(3);
+
+	process(SaveStateBus_wren, SaveStateBus_Adr, SS_CPU0_BACK, SS_CPU1_BACK, SS_CPU2_BACK, SS_CPU3_BACK)
+	begin
+		DIRSet  <= '0';
+		CPU_DIR <= (others => '0');
+		if SaveStateBus_wren = '1' and SaveStateBus_Adr = std_logic_vector(to_unsigned(REG_SAVESTATE_CPU3.Adr, SaveStateBus_Adr'length)) then
+			CPU_DIR <= SS_CPU0_BACK(63 downto 0) & SS_CPU1_BACK(63 downto 0) & SS_CPU2_BACK(63 downto 0) & SS_CPU3_BACK(19 downto 0);
+			DIRSet  <= '1';
+		end if;
+	end process;
 
 	u0 : work.T80
 		generic map(
@@ -136,7 +183,10 @@ begin
 			MC => MCycle,
 			TS => TState,
 			OUT0 => OUT0,
-			IntCycle_n => IntCycle_n
+			IntCycle_n => IntCycle_n,
+			REG => CPU_REG,
+			DIRSet => DIRSet,
+			DIR => CPU_DIR
 		);
 
 	process (RESET_n, CLK)

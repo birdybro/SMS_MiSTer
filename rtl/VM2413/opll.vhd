@@ -48,7 +48,13 @@ entity opll is
         cs_n        : in  std_logic;
         we_n        : in  std_logic;
         ic_n        : in  std_logic;
-        mixout      : out std_logic_vector(13 downto 0 )
+        mixout      : out std_logic_vector(13 downto 0 );
+        -- savestates
+        SaveStateBus_Din  : in  std_logic_vector(63 downto 0) := (others => '0');
+        SaveStateBus_Adr  : in  std_logic_vector(9 downto 0)  := (others => '0');
+        SaveStateBus_wren : in  std_logic := '0';
+        SaveStateBus_rst  : in  std_logic := '0';
+        SaveStateBus_Dout : out std_logic_vector(63 downto 0) := (others => '0')
     );
 end opll;
 
@@ -93,7 +99,13 @@ architecture rtl of opll is
         fnum    : out   fnum_type;
         rks     : out   rks_type;
         key     : out   std_logic;
-        rhythm  : out   std_logic
+        rhythm  : out   std_logic;
+        -- savestates
+        SaveStateBus_Din  : in  std_logic_vector(63 downto 0) := (others => '0');
+        SaveStateBus_Adr  : in  std_logic_vector(9 downto 0)  := (others => '0');
+        SaveStateBus_wren : in  std_logic := '0';
+        SaveStateBus_rst  : in  std_logic := '0';
+        SaveStateBus_Dout : out std_logic_vector(63 downto 0) := (others => '0')
     );
     end component;
 
@@ -322,8 +334,35 @@ begin
 
     -- no delay
     ct: controller port map (
-        xin,reset,xena, slot, stage, opllwr,opllptr,oplldat,
-        am,pm,wf,ml,tl,fb,ar,dr,sl,rr,blk,fnum,rks,key,rhythm);
+        clk     => xin,
+        reset   => reset,
+        clkena  => xena,
+        slot    => slot,
+        stage   => stage,
+        wr      => opllwr,
+        addr    => opllptr,
+        data    => oplldat,
+        am      => am,
+        pm      => pm,
+        wf      => wf,
+        ml      => ml,
+        tl      => tl,
+        fb      => fb,
+        ar      => ar,
+        dr      => dr,
+        sl      => sl,
+        rr      => rr,
+        blk     => blk,
+        fnum    => fnum,
+        rks     => rks,
+        key     => key,
+        rhythm  => rhythm,
+        SaveStateBus_Din  => SaveStateBus_Din,
+        SaveStateBus_Adr  => SaveStateBus_Adr,
+        SaveStateBus_wren => SaveStateBus_wren,
+        SaveStateBus_rst  => SaveStateBus_rst,
+        SaveStateBus_Dout => SaveStateBus_Dout
+    );
 
     -- 2 stages delay
     eg: envelopegenerator port map (

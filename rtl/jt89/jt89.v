@@ -39,7 +39,15 @@ module jt89(
     input    [7:0] mux,
     output  signed [10:0] soundL,
     output  signed [10:0] soundR,
-    output         ready
+    output         ready,
+
+    // savestates
+    input  [63:0]  SaveStateBus_Din,
+    input  [9:0]   SaveStateBus_Adr,
+    input          SaveStateBus_wren,
+    input          SaveStateBus_rst,
+    output [63:0]  SaveStateBus_Dout,
+    input  [9:0]   SaveStateBus_index   // 0 = PSG0, 1 = PSG1
 );
 
 wire signed [ 8:0] ch0, ch1, ch2, noise;
@@ -69,6 +77,16 @@ reg [2:0] regn;
 reg [3:0] clk_div;
 (* direct_enable = 1 *) reg cen_16;
 
+// savestate wiring
+localparam [9:0] REG_SAVESTATE_PSG0_ADR = 10'd10;
+wire ss_match = (SaveStateBus_Adr == (REG_SAVESTATE_PSG0_ADR + SaveStateBus_index));
+wire [63:0] ss_pack = {8'd0,
+                       regn, 5'd0,
+                       ctrl3, 13'd0,
+                       vol3, vol2, vol1, vol0,
+                       tone2, tone1, tone0};
+assign SaveStateBus_Dout = ss_match ? ss_pack : 64'd0;
+
 always @(negedge clk )
     if( rst ) begin
         cen_16 <= 1'b1;
@@ -77,7 +95,7 @@ always @(negedge clk )
     end
 
 always @(posedge clk )
-    if( rst ) 
+    if( rst || SaveStateBus_rst ) 
         clk_div <= 4'd0;
     else if( clk_en )
         clk_div <= clk_div + 1'b1;
@@ -86,14 +104,25 @@ reg clr_noise, last_wr;
 wire [2:0] reg_sel = din[7] ? din[6:4] : regn;
 
 always @(posedge clk) 
-    if( rst ) begin
+    if( rst || SaveStateBus_rst ) begin
         { vol0, vol1, vol2, vol3 } <= {16{1'b1}};
         { tone0, tone1, tone2 } <= 30'd0;
         ctrl3 <= 3'b100;
+        regn  <= 3'b000;
     end
     else begin
         last_wr <= wr_n;
-        if( !wr_n && last_wr ) begin
+        if(SaveStateBus_wren && ss_match) begin
+            tone0 <= SaveStateBus_Din[9:0];
+            tone1 <= SaveStateBus_Din[19:10];
+            tone2 <= SaveStateBus_Din[29:20];
+            vol0  <= SaveStateBus_Din[33:30];
+            vol1  <= SaveStateBus_Din[37:34];
+            vol2  <= SaveStateBus_Din[41:38];
+            vol3  <= SaveStateBus_Din[45:42];
+            ctrl3 <= SaveStateBus_Din[48:46];
+            regn  <= SaveStateBus_Din[56:54];
+        end else if( !wr_n && last_wr ) begin
             clr_noise <= din[7:4] == 4'b1110; // clear noise
             // when there is an access to the control register
             regn <= reg_sel;

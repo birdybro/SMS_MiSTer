@@ -65,7 +65,10 @@
 library ieee;
     use ieee.std_logic_1164.all;
     use ieee.std_logic_unsigned.all;
+    use ieee.numeric_std.all;
     use work.vm2413.all;
+    use work.pBus_savestates.all;
+    use work.pReg_savestates_sms.all;
 
 entity controller is port (
 
@@ -97,7 +100,13 @@ entity controller is port (
     rks     : out   rks_type;
 
     key     : out   std_logic;
-    rhythm  : out   std_logic
+    rhythm  : out   std_logic;
+    -- savestates
+    SaveStateBus_Din  : in  std_logic_vector(63 downto 0) := (others => '0');
+    SaveStateBus_Adr  : in  std_logic_vector(9 downto 0)  := (others => '0');
+    SaveStateBus_wren : in  std_logic := '0';
+    SaveStateBus_rst  : in  std_logic := '0';
+    SaveStateBus_Dout : out std_logic_vector(63 downto 0) := (others => '0')
 
     -- slot_out : out slot_id
 );
@@ -112,7 +121,11 @@ architecture rtl of controller is
             addr    : in    std_logic_vector(  3 downto 0 );
             wr      : in    std_logic;
             idata   : in    std_logic_vector( 23 downto 0 );
-            odata   : out   std_logic_vector( 23 downto 0 )
+            odata   : out   std_logic_vector( 23 downto 0 );
+            ss_wren : in    std_logic := '0';
+            ss_waddr: in    std_logic_vector(3 downto 0) := (others => '0');
+            ss_wdata: in    std_logic_vector(23 downto 0) := (others => '0');
+            ss_dump : out   std_logic_vector(215 downto 0) := (others => '0')
         );
     end component;
 
@@ -124,7 +137,13 @@ architecture rtl of controller is
         rwaddr : in voice_id_type;
         roaddr : in voice_id_type;
         odata   : out voice_type;
-        rodata : out voice_type );
+        rodata : out voice_type;
+        ss_wren  : in  std_logic := '0';
+        ss_waddr : in  std_logic_vector(5 downto 0) := (others => '0');
+        ss_wdata : in  voice_vector_type := (others => '0');
+        ss_voice0: out voice_vector_type := (others => '0');
+        ss_voice1: out voice_vector_type := (others => '0')
+        );
     end component;
 
     -- the array which caches instrument number of each channel.
@@ -159,6 +178,18 @@ architecture rtl of controller is
     signal w_channel            : std_logic_vector(  3 downto 0 );
 --  signal w_is_carrier         : std_logic;
 
+    signal regs_dump          : std_logic_vector(215 downto 0);
+    signal regs_ss_wren       : std_logic := '0';
+    signal regs_ss_addr       : std_logic_vector(3 downto 0) := (others => '0');
+    signal regs_ss_wdata      : std_logic_vector(23 downto 0) := (others => '0');
+    signal voice_ss_wren      : std_logic := '0';
+    signal voice_ss_addr      : std_logic_vector(5 downto 0) := (others => '0');
+    signal voice_ss_wdata     : voice_vector_type := (others => '0');
+    signal voice_dump0        : voice_vector_type;
+    signal voice_dump1        : voice_vector_type;
+    signal extra_mode         : std_logic := '0';
+    signal ss_offset          : integer range -1 to 15 := -1;
+
 begin   -- rtl
 
     --  レジスタ設定値を保持するためのメモリ
@@ -169,12 +200,50 @@ begin   -- rtl
         addr    => regs_addr,
         wr      => regs_wr,
         idata   => regs_wdata,
-        odata   => regs_rdata
+        odata   => regs_rdata,
+        ss_wren => regs_ss_wren,
+        ss_waddr=> regs_ss_addr,
+        ss_wdata=> regs_ss_wdata,
+        ss_dump => regs_dump
     );
 
     vmem : voicememory port map (
-        clk, reset, user_voice_wdata, user_voice_wr, user_voice_addr, slot_voice_addr,
-        user_voice_rdata, slot_voice_data );
+        clk       => clk,
+        reset     => reset,
+        idata     => user_voice_wdata,
+        wr        => user_voice_wr,
+        rwaddr    => user_voice_addr,
+        roaddr    => slot_voice_addr,
+        odata     => user_voice_rdata,
+        rodata    => slot_voice_data,
+        ss_wren   => voice_ss_wren,
+        ss_waddr  => voice_ss_addr,
+        ss_wdata  => voice_ss_wdata,
+        ss_voice0 => voice_dump0,
+        ss_voice1 => voice_dump1
+    );
+    ss_offset <= to_integer(unsigned(SaveStateBus_Adr) - REG_SAVESTATE_FM0.Adr) when unsigned(SaveStateBus_Adr) >= REG_SAVESTATE_FM0.Adr and unsigned(SaveStateBus_Adr) < REG_SAVESTATE_FM0.Adr + 12 else -1;
+
+    process(ss_offset, regs_dump, rflag, extra_mode, voice_dump0, voice_dump1)
+        variable dout : std_logic_vector(63 downto 0);
+    begin
+        dout := (others => '0');
+        case ss_offset is
+            when 0 to 8 =>
+                dout(23 downto 0) := regs_dump((ss_offset*24)+23 downto ss_offset*24);
+            when 9 =>
+                dout(7 downto 0) := rflag;
+                dout(8) := extra_mode;
+            when 10 =>
+                dout(35 downto 0) := voice_dump0;
+            when 11 =>
+                dout(35 downto 0) := voice_dump1;
+            when others =>
+                null;
+        end case;
+        SaveStateBus_Dout <= dout;
+    end process;
+
 
     --  レジスタアドレスラッチ (第１ステージ)
     process( reset, clk )
@@ -228,12 +297,11 @@ begin   -- rtl
         variable fb_buf : fb_type;
         variable wf_buf : wf_type;
 
-        variable extra_mode : std_logic;
         variable vindex : voice_id_type;
 
     begin   -- process
 
-        if(reset = '1') then
+        if(reset = '1' or SaveStateBus_rst = '1') then
 
             key <= '0';
             rhythm <= '0';
@@ -257,10 +325,37 @@ begin   -- rtl
             key <= '0';
             rks <= (others=>'0');
             rhythm <= '0';
-            extra_mode := '0';
+            extra_mode <= '0';
             vindex := 0;
 
-        elsif rising_edge(clk) then if clkena='1' then
+        elsif rising_edge(clk) then
+            regs_ss_wren  <= '0';
+            voice_ss_wren <= '0';
+            regs_wr       <= '0';
+            user_voice_wr <= '0';
+
+            if SaveStateBus_wren = '1' then
+                case ss_offset is
+                    when 0 to 8 =>
+                        regs_ss_wren  <= '1';
+                        regs_ss_addr  <= std_logic_vector(to_unsigned(ss_offset, regs_ss_addr'length));
+                        regs_ss_wdata <= SaveStateBus_Din(23 downto 0);
+                    when 9 =>
+                        rflag      <= SaveStateBus_Din(7 downto 0);
+                        extra_mode <= SaveStateBus_Din(8);
+                    when 10 =>
+                        voice_ss_wren  <= '1';
+                        voice_ss_addr  <= (others => '0');
+                        voice_ss_wdata <= SaveStateBus_Din(35 downto 0);
+                    when 11 =>
+                        voice_ss_wren  <= '1';
+                        voice_ss_addr  <= std_logic_vector(to_unsigned(1, voice_ss_addr'length));
+                        voice_ss_wdata <= SaveStateBus_Din(35 downto 0);
+                    when others =>
+                        null;
+                end case;
+
+            elsif clkena='1' then
 
             case stage is
             --------------------------------------------------------------------------
@@ -381,9 +476,9 @@ begin   -- rtl
                     elsif conv_integer(addr) = 240 then
 
                         if data(7 downto 0) = "10000000" then
-                            extra_mode := '1';
+                            extra_mode <= '1';
                         else
-                            extra_mode := '0';
+                            extra_mode <= '0';
                         end if;
 
                     end if;

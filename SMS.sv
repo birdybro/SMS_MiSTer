@@ -238,7 +238,29 @@ end
 
 wire [1:0] ar = status[27:26];
 wire vga_de;
-screen_rotate screen_rotate (.*);
+
+// Intercept screen_rotate's DDRAM signals for arbiter ch0
+wire  [7:0] sr_DDRAM_BURSTCNT;
+wire [28:0] sr_DDRAM_ADDR;
+wire        sr_DDRAM_RD;
+wire [63:0] sr_DDRAM_DIN;
+wire  [7:0] sr_DDRAM_BE;
+wire        sr_DDRAM_WE;
+
+screen_rotate screen_rotate
+(
+	.*,
+	.VGA_DE(vga_de),
+
+	// Route screen_rotate's DDRAM through arbiter ch0 (override .*)
+	.DDRAM_BURSTCNT(sr_DDRAM_BURSTCNT),
+	.DDRAM_ADDR(sr_DDRAM_ADDR),
+	.DDRAM_RD(sr_DDRAM_RD),
+	.DDRAM_DIN(sr_DDRAM_DIN),
+	.DDRAM_BE(sr_DDRAM_BE),
+	.DDRAM_WE(sr_DDRAM_WE)
+);
+
 video_freak video_freak
 (
 	.*,
@@ -272,6 +294,12 @@ parameter CONF_STR = {
 	"H8OP,Autosave,OFF,ON;",
 	"H8H9D0R6,Load Backup RAM;",
 	"H8H9D0R7,Save Backup RAM;",
+	"H8-;",
+	"H8O[42:41],State Slot,1,2,3,4;",
+	"H8RK,Save State;",
+	"H8RL,Load State;",
+	"H8-;",
+	"H8O27,Rewind,OFF,ON;",
 	"H8-;",
 
 	"H8OA,Region,US/EU,Japan;",
@@ -777,7 +805,37 @@ system #(63) system
 	.ROMCL(clk_sys),
 	.ROMAD(ioctl_addr),
 	.ROMDT(ioctl_dout),
-	.ROMEN(ioctl_wr & ioctl_index==0)
+	.ROMEN(ioctl_wr & ioctl_index==0),
+
+	// Savestate support
+	.increaseSSHeaderCount(!status[31]),
+	.save_state(ss_save),
+	.load_state(ss_load),
+	.savestate_number(ss_slot),
+	.sleep_savestate(sleep_savestate),
+
+	.SaveStateExt_Din(SaveStateBus_Din),
+	.SaveStateExt_Adr(SaveStateBus_Adr),
+	.SaveStateExt_wren(SaveStateBus_wren),
+	.SaveStateExt_rst(SaveStateBus_rst),
+	.SaveStateExt_Dout(SaveStateBus_Dout),
+	.SaveStateExt_load(savestate_load),
+
+	.Savestate_CRAMAddr(Savestate_CRAMAddr),
+	.Savestate_CRAMRWrEn(Savestate_CRAMRWrEn),
+	.Savestate_CRAMWriteData(Savestate_CRAMWriteData),
+	.Savestate_CRAMReadData(Savestate_CRAMReadData),
+
+	.SAVE_out_Din(ss_din),
+	.SAVE_out_Dout(ss_dout),
+	.SAVE_out_Adr(ss_addr),
+	.SAVE_out_rnw(ss_rnw),
+	.SAVE_out_ena(ss_req),
+	.SAVE_out_be(ss_be),
+	.SAVE_out_done(ss_ack),
+
+	.rewind_on(status[27]),
+	.rewind_active(status[27] & joy_0[10])
 );
 
 wire [12:0] key_a;
@@ -908,6 +966,29 @@ wire [15:0] audio_l, audio_r;
 assign AUDIO_L=audio_l;
 assign AUDIO_R=audio_r;
 
+// =============== Savestates ===============
+wire [19:0] Savestate_CRAMAddr;
+wire        Savestate_CRAMRWrEn;
+wire  [7:0] Savestate_CRAMWriteData;
+wire  [7:0] Savestate_CRAMReadData;
+
+wire [63:0] SaveStateBus_Din;
+wire  [9:0] SaveStateBus_Adr;
+wire        SaveStateBus_wren;
+wire        SaveStateBus_rst;
+wire [63:0] SaveStateBus_Dout;
+wire        savestate_load;
+wire        sleep_savestate;
+
+wire [63:0] ss_dout, ss_din;
+wire [27:2] ss_addr;
+wire  [7:0] ss_be;
+wire        ss_rnw, ss_req, ss_ack;
+
+wire  [1:0] ss_slot;
+wire  [7:0] ss_info;
+wire        ss_save, ss_load, ss_info_req;
+
 //compressor compressor
 //(
 //	clk_sys,
@@ -1026,11 +1107,77 @@ dpram #(.widthad_a(15)) nvram_inst
 	.data_a      (nvram_d),
 	.q_a         (nvram_q),
 	.clock_b     (clk_sys),
-	.address_b   ({sd_lba[5:0],sd_buff_addr}),
-	.wren_b      (sd_buff_wr & sd_ack),
-	.data_b      (sd_buff_dout),
-	.q_b         (sd_buff_din)
+	.address_b   (sleep_savestate ? Savestate_CRAMAddr[14:0] : {sd_lba[5:0],sd_buff_addr}),
+	.wren_b      (sleep_savestate ? Savestate_CRAMRWrEn : (sd_buff_wr & sd_ack)),
+	.data_b      (sleep_savestate ? Savestate_CRAMWriteData : sd_buff_dout),
+	.q_b         (sleep_savestate ? Savestate_CRAMReadData : sd_buff_din)
 );
+
+// DDRAM arbiter - screen_rotate on ch0, savestate on ch1
+// Convert screen_rotate's standard DDRAM interface to channel interface
+wire [27:1] sr_ch_addr = sr_DDRAM_ADDR[27:1];
+wire        sr_ch_req = sr_DDRAM_RD | sr_DDRAM_WE;
+wire        sr_ch_rnw = sr_DDRAM_RD;
+wire [63:0] sr_ch_din = sr_DDRAM_DIN;
+wire  [7:0] sr_ch_be = sr_DDRAM_BE;
+
+assign DDRAM_CLK = clk_sys;
+ddram ddram
+(
+	.DDRAM_CLK(clk_sys),
+	.DDRAM_BUSY(DDRAM_BUSY),
+	.DDRAM_BURSTCNT(DDRAM_BURSTCNT),
+	.DDRAM_ADDR(DDRAM_ADDR),
+	.DDRAM_DOUT(DDRAM_DOUT),
+	.DDRAM_DOUT_READY(DDRAM_DOUT_READY),
+	.DDRAM_RD(DDRAM_RD),
+	.DDRAM_DIN(DDRAM_DIN),
+	.DDRAM_BE(DDRAM_BE),
+	.DDRAM_WE(DDRAM_WE),
+
+	// ch0: screen_rotate
+	.ch0_addr(sr_ch_addr),
+	.ch0_dout(), // screen_rotate reads DDRAM_DOUT directly
+	.ch0_din(sr_ch_din),
+	.ch0_req(sr_ch_req),
+	.ch0_rnw(sr_ch_rnw),
+	.ch0_be(sr_ch_be),
+	.ch0_ready(), // screen_rotate monitors DDRAM_DOUT_READY directly
+
+	// ch1: savestate
+	.ch1_addr({ss_addr, 1'b0}),
+	.ch1_din(ss_din),
+	.ch1_dout(ss_dout),
+	.ch1_req(ss_req),
+	.ch1_rnw(ss_rnw),
+	.ch1_be(ss_be),
+	.ch1_ready(ss_ack)
+);
+
+// Savestate UI
+savestate_ui savestate_ui
+(
+	.clk(clk_sys),
+	.ps2_key(ps2_key[10:0]),
+	.allow_ss(~ioctl_download),
+	.joySS(joy_0[9]),
+	.joyRight(joy_0[0]),
+	.joyLeft(joy_0[1]),
+	.joyDown(joy_0[2]),
+	.joyUp(joy_0[3]),
+	.joyStart(joy_0[5]),
+	.joyRewind(joy_0[10]),
+	.rewindEnable(status[27]),
+	.status_slot(status[42:41]),
+	.OSD_saveload(status[44:43]),
+	.ss_save(ss_save),
+	.ss_load(ss_load),
+	.ss_info_req(ss_info_req),
+	.ss_info(ss_info),
+	.statusUpdate(),
+	.selected_slot(ss_slot)
+);
+defparam savestate_ui.INFO_TIMEOUT_BITS = 27;
 
 wire downloading = cart_download;
 reg old_downloading = 0;

@@ -1,9 +1,11 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL; 
+use IEEE.NUMERIC_STD.ALL;
 --use IEEE.STD_LOGIC_ARITH.ALL;
--- use IEEE.STD_LOGIC_UNSIGNED.ALL; 
+-- use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use work.jt89.all;
+use work.pBus_savestates.all;
+use work.pReg_savestates.all;
 
 entity system is
 	generic (
@@ -117,7 +119,37 @@ entity system is
 		ROMCL  : IN  STD_LOGIC;
 		ROMAD  : IN STD_LOGIC_VECTOR(24 downto 0);
 		ROMDT  : IN STD_LOGIC_VECTOR(7 downto 0);
-		ROMEN  : IN  STD_LOGIC
+		ROMEN  : IN  STD_LOGIC;
+
+		-- Savestate support
+		increaseSSHeaderCount : in  std_logic;
+		save_state            : in  std_logic;
+		load_state            : in  std_logic;
+		savestate_number      : in  integer range 0 to 3;
+		sleep_savestate       : out std_logic;
+
+		SaveStateExt_Din      : out std_logic_vector(63 downto 0);
+		SaveStateExt_Adr      : out std_logic_vector(9 downto 0);
+		SaveStateExt_wren     : out std_logic;
+		SaveStateExt_rst      : out std_logic;
+		SaveStateExt_Dout     : in  std_logic_vector(63 downto 0);
+		SaveStateExt_load     : out std_logic;
+
+		Savestate_CRAMAddr    : out std_logic_vector(19 downto 0);
+		Savestate_CRAMRWrEn   : out std_logic;
+		Savestate_CRAMWriteData : out std_logic_vector(7 downto 0);
+		Savestate_CRAMReadData  : in  std_logic_vector(7 downto 0);
+
+		SAVE_out_Din          : out std_logic_vector(63 downto 0);
+		SAVE_out_Dout         : in  std_logic_vector(63 downto 0);
+		SAVE_out_Adr          : out std_logic_vector(25 downto 0);
+		SAVE_out_rnw          : out std_logic;
+		SAVE_out_ena          : out std_logic;
+		SAVE_out_be           : out std_logic_vector(7 downto 0);
+		SAVE_out_done         : in  std_logic;
+
+		rewind_on             : in  std_logic;
+		rewind_active         : in  std_logic
 
 	);
 end system;
@@ -276,7 +308,52 @@ architecture Behavioral of system is
 		ROMEN  : IN  STD_LOGIC
 	);
 	END COMPONENT;
-	
+
+	-- Savestate signals
+	signal savestate_savestate   : std_logic;
+	signal savestate_loadstate   : std_logic;
+	signal savestate_address     : integer;
+	signal savestate_busy        : std_logic;
+	signal savestate_loaded      : std_logic;
+
+	signal sleep_rewind          : std_logic;
+	signal sleep_savestates      : std_logic;
+
+	signal SaveStateBus_Din      : std_logic_vector(63 downto 0);
+	signal SaveStateBus_Adr      : std_logic_vector(9 downto 0);
+	signal SaveStateBus_wren     : std_logic;
+	signal SaveStateBus_rst      : std_logic;
+	signal SaveStateBus_Dout     : std_logic_vector(63 downto 0);
+
+	-- Individual wired-or signals (avoiding array type to prevent operator resolution issues)
+	signal SaveStateBus_wired_or_0 : std_logic_vector(63 downto 0);
+	signal SaveStateBus_wired_or_1 : std_logic_vector(63 downto 0);
+	signal SaveStateBus_wired_or_2 : std_logic_vector(63 downto 0);
+	signal SaveStateBus_wired_or_3 : std_logic_vector(63 downto 0);
+	signal SaveStateBus_wired_or_4 : std_logic_vector(63 downto 0);
+	signal SaveStateBus_wired_or_5 : std_logic_vector(63 downto 0);
+
+	signal Savestate_RAMAddr     : std_logic_vector(19 downto 0);
+	signal Savestate_RAMWrEn     : std_logic_vector(5 downto 0);
+	signal Savestate_RAMWriteData: std_logic_vector(7 downto 0);
+	signal Savestate_RAMReadData_WRAM  : std_logic_vector(7 downto 0);
+	signal Savestate_RAMReadData_VRAM1 : std_logic_vector(7 downto 0);
+	signal Savestate_RAMReadData_VRAM2 : std_logic_vector(7 downto 0);
+	signal Savestate_RAMReadData_CRAM  : std_logic_vector(7 downto 0);
+	signal Savestate_RAMReadData_BRAM  : std_logic_vector(7 downto 0);
+	signal Savestate_RAMReadData_CRAM2 : std_logic_vector(7 downto 0);
+
+	-- CPU savestate
+	signal cpu_reg_in            : std_logic_vector(211 downto 0);
+	signal cpu_reg_out           : std_logic_vector(211 downto 0);
+	signal cpu_dirset            : std_logic;
+
+	-- System state for savestates
+	signal ss_bank_state         : std_logic_vector(63 downto 0);
+	signal ss_bank_state_back    : std_logic_vector(63 downto 0);
+	signal ss_mapper_state       : std_logic_vector(63 downto 0);
+	signal ss_mapper_state_back  : std_logic_vector(63 downto 0);
+
 begin
 
 	-- Game Genie
@@ -317,7 +394,10 @@ begin
 		WR_n		=> WR_n,
 		A			=> A,
 		DI			=> GENIE_DI,
-		DO			=> D_in
+		DO			=> D_in,
+		REG		=> cpu_reg_out,
+		DIRSet	=> cpu_dirset,
+		DIR		=> cpu_reg_in
 	);
 
 	vdp_inst: entity work.vdp
@@ -639,9 +719,12 @@ port map(
 	process (clk_sys)
 	begin
 		if rising_edge(clk_sys) then
-			if RESET_n='0' then 
+			if RESET_n='0' then
 				det_D <= "111";
 				PSG_mux <= x"FF";
+			elsif (SaveStateBus_rst = '1') then
+				PSG_mux <= ss_mapper_state_back(59 downto 52);
+				det_D <= ss_mapper_state_back(51 downto 49);
 			elsif det_WR_n='0' then
 				det_D <= D_in(2 downto 0);
 			elsif bal_WR_n='0' then
@@ -695,7 +778,13 @@ port map(
 			mapper_msx <= '0' ;
 		else
 			if rising_edge(clk_sys) then
-				if bootloader_n='1' and not mapper_msx_lock then 
+				if (SaveStateBus_rst = '1') then
+					mapper_msx <= ss_mapper_state_back(43);
+					mapper_msx_lock <= ss_mapper_state_back(42) = '1';
+					mapper_msx_lock0 <= ss_mapper_state_back(41) = '1';
+					mapper_msx_check1 <= ss_mapper_state_back(40) = '1';
+					mapper_msx_check0 <= ss_mapper_state_back(39) = '1';
+				elsif bootloader_n='1' and not mapper_msx_lock then
 					if MREQ_n='0' then 
 					-- in this state, A is stable but not D_out
 						if A=x"0000" then
@@ -735,10 +824,26 @@ port map(
 			mapper_codies_lock <= '0' ;
 		else
 			if rising_edge(clk_sys) then
-				if WR_n='1' and MREQ_n='0' then
-					last_read_addr <= A; -- gyurco anti-ldir patch
-				end if;
-				if systeme = '1' then
+				-- Savestate restore takes priority
+				if (SaveStateBus_rst = '1') then
+					bank3 <= ss_bank_state_back(63 downto 56);
+					bank2 <= ss_bank_state_back(55 downto 48);
+					bank1 <= ss_bank_state_back(47 downto 40);
+					bank0 <= ss_bank_state_back(39 downto 32);
+					-- rom_bank, vdp_cpu_bank, vdp2_se_bank, vdp_se_bank are driven by io component
+					-- mapper_msx* signals are driven by MSX detection process
+					mapper_codies_lock <= ss_mapper_state_back(38);
+					mapper_codies <= ss_mapper_state_back(37);
+					lock_mapper_B <= ss_mapper_state_back(36);
+					nvram_cme <= ss_mapper_state_back(35);
+					nvram_p <= ss_mapper_state_back(34);
+					nvram_ex <= ss_mapper_state_back(33);
+					nvram_e <= ss_mapper_state_back(32);
+				else
+					if WR_n='1' and MREQ_n='0' then
+						last_read_addr <= A; -- gyurco anti-ldir patch
+					end if;
+					if systeme = '1' then
 					-- no systeme mappers
 				elsif mapper_msx = '1' then
 					if WR_n='0' and A(15 downto 2)="00000000000000" then
@@ -802,6 +907,7 @@ port map(
 						end case ;
 					end if;
 				end if;
+				end if; -- end savestate restore else
 			end if;
 		end if;
 	end process;
@@ -849,5 +955,177 @@ port map(
 			end case;
 		end if;
 	end process;
+
+	-- ===============================
+	-- Savestate System
+	-- ===============================
+
+	-- Pack system state for savestates (64 bits total)
+	ss_bank_state <= bank3 & bank2 & bank1 & bank0 &           -- 32 bits
+	                 x"000" & rom_bank & "000000" &             -- 22 bits
+	                 vdp_cpu_bank & vdp2_se_bank & vdp_se_bank & -- 3 bits
+	                 "0000000";                                 -- 7 bits padding
+
+	ss_mapper_state <= x"0" & PSG_mux &                                     -- 12 bits
+	                   det_D & "00000" &                                    -- 8 bits
+	                   mapper_msx &                                          -- 1 bit
+	                   std_logic_vector(to_unsigned(boolean'pos(mapper_msx_lock), 1)) &      -- 1 bit
+	                   std_logic_vector(to_unsigned(boolean'pos(mapper_msx_lock0), 1)) &     -- 1 bit
+	                   std_logic_vector(to_unsigned(boolean'pos(mapper_msx_check1), 1)) &    -- 1 bit
+	                   std_logic_vector(to_unsigned(boolean'pos(mapper_msx_check0), 1)) &    -- 1 bit
+	                   mapper_codies_lock &                                  -- 1 bit
+	                   mapper_codies &                                       -- 1 bit
+	                   lock_mapper_B &                                       -- 1 bit
+	                   nvram_cme &                                          -- 1 bit
+	                   nvram_p &                                            -- 1 bit
+	                   nvram_ex &                                           -- 1 bit
+	                   nvram_e &                                            -- 1 bit
+	                   x"00000000";                                         -- 32 bits padding
+
+	-- CPU registers (212 bits split across 4 DWORDS)
+	iREG_SAVESTATE_T80_1 : entity work.eReg_SavestateV
+	generic map(0, 0, 63, 0, x"0000000000000000")
+	port map(clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren,
+	         SaveStateBus_rst, SaveStateBus_wired_or_0,
+	         cpu_reg_out(63 downto 0), cpu_reg_in(63 downto 0));
+
+	iREG_SAVESTATE_T80_2 : entity work.eReg_SavestateV
+	generic map(0, 1, 63, 0, x"0000000000000000")
+	port map(clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren,
+	         SaveStateBus_rst, SaveStateBus_wired_or_1,
+	         cpu_reg_out(127 downto 64), cpu_reg_in(127 downto 64));
+
+	iREG_SAVESTATE_T80_3 : entity work.eReg_SavestateV
+	generic map(0, 2, 63, 0, x"0000000000000000")
+	port map(clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren,
+	         SaveStateBus_rst, SaveStateBus_wired_or_2,
+	         cpu_reg_out(191 downto 128), cpu_reg_in(191 downto 128));
+
+	iREG_SAVESTATE_T80_4 : entity work.eReg_SavestateV
+	generic map(0, 3, 19, 0, x"0000000000000000")
+	port map(clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren,
+	         SaveStateBus_rst, SaveStateBus_wired_or_3,
+	         cpu_reg_out(211 downto 192), cpu_reg_in(211 downto 192));
+
+	-- System banking state
+	iREG_SAVESTATE_SysBank : entity work.eReg_SavestateV
+	generic map(0, 4, 63, 0, x"0000000000000000")
+	port map(clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren,
+	         SaveStateBus_rst, SaveStateBus_wired_or_4,
+	         ss_bank_state, ss_bank_state_back);
+
+	-- System mapper state
+	iREG_SAVESTATE_SysMapper : entity work.eReg_SavestateV
+	generic map(0, 5, 63, 0, x"0000000000000000")
+	port map(clk_sys, SaveStateBus_Din, SaveStateBus_Adr, SaveStateBus_wren,
+	         SaveStateBus_rst, SaveStateBus_wired_or_5,
+	         ss_mapper_state, ss_mapper_state_back);
+
+	-- CPU DIRSet control
+	cpu_dirset <= SaveStateBus_rst;
+
+	-- OR together all savestate bus outputs
+	SaveStateBus_Dout <= SaveStateBus_wired_or_0 or SaveStateBus_wired_or_1 or
+	                     SaveStateBus_wired_or_2 or SaveStateBus_wired_or_3 or
+	                     SaveStateBus_wired_or_4 or SaveStateBus_wired_or_5 or
+	                     SaveStateExt_Dout;
+
+	-- Savestate managers
+	sms_savestates_inst : entity work.sms_savestates
+	port map (
+		clk                    => clk_sys,
+		reset_in               => not RESET_n,
+		reset_out              => open,
+
+		load_done              => savestate_loaded,
+
+		increaseSSHeaderCount  => increaseSSHeaderCount,
+		save                   => savestate_savestate,
+		load                   => savestate_loadstate,
+		savestate_address      => savestate_address,
+		savestate_busy         => savestate_busy,
+
+		bk_ram_size            => x"04",  -- 32KB backup RAM default
+		systeme                => systeme,
+
+		vsync                  => vdp_IRQ_n,
+
+		BUS_Din                => SaveStateBus_Din,
+		BUS_Adr                => SaveStateBus_Adr,
+		BUS_wren               => SaveStateBus_wren,
+		BUS_rst                => SaveStateBus_rst,
+		BUS_Dout               => SaveStateBus_Dout,
+
+		loading_savestate      => open,
+		saving_savestate       => open,
+		sleep_savestate        => sleep_savestates,
+		clock_ena_in           => ce_cpu,
+
+		Save_RAMAddr           => Savestate_RAMAddr,
+		Save_RAMWrEn           => Savestate_RAMWrEn,
+		Save_RAMWriteData      => Savestate_RAMWriteData,
+		Save_RAMReadData_WRAM  => Savestate_RAMReadData_WRAM,
+		Save_RAMReadData_VRAM1 => Savestate_RAMReadData_VRAM1,
+		Save_RAMReadData_VRAM2 => Savestate_RAMReadData_VRAM2,
+		Save_RAMReadData_CRAM  => Savestate_RAMReadData_CRAM,
+		Save_RAMReadData_BRAM  => Savestate_RAMReadData_BRAM,
+		Save_RAMReadData_CRAM2 => Savestate_RAMReadData_CRAM2,
+
+		bus_out_Din            => SAVE_out_Din,
+		bus_out_Dout           => SAVE_out_Dout,
+		bus_out_Adr            => SAVE_out_Adr,
+		bus_out_rnw            => SAVE_out_rnw,
+		bus_out_ena            => SAVE_out_ena,
+		bus_out_be             => SAVE_out_be,
+		bus_out_done           => SAVE_out_done
+	);
+
+	sms_statemanager_inst : entity work.sms_statemanager
+	generic map (
+		Softmap_SaveState_ADDR => 58720256,
+		Softmap_Rewind_ADDR    => 33554432
+	)
+	port map (
+		clk                 => clk_sys,
+		reset               => not RESET_n,
+
+		rewind_on           => rewind_on,
+		rewind_active       => rewind_active,
+
+		savestate_number    => savestate_number,
+		save                => save_state,
+		load                => load_state,
+
+		sleep_rewind        => sleep_rewind,
+		vsync               => vdp_IRQ_n,
+
+		request_savestate   => savestate_savestate,
+		request_loadstate   => savestate_loadstate,
+		request_address     => savestate_address,
+		request_busy        => savestate_busy
+	);
+
+	sleep_savestate <= sleep_rewind or sleep_savestates;
+
+	-- Connect external savestate ports
+	SaveStateExt_Din  <= SaveStateBus_Din;
+	SaveStateExt_Adr  <= SaveStateBus_Adr;
+	SaveStateExt_wren <= SaveStateBus_wren;
+	SaveStateExt_rst  <= SaveStateBus_rst;
+	SaveStateExt_load <= savestate_loaded;
+
+	-- Connect cart RAM savestate port
+	Savestate_CRAMAddr      <= Savestate_RAMAddr;
+	Savestate_CRAMRWrEn     <= Savestate_RAMWrEn(4);
+	Savestate_CRAMWriteData <= Savestate_RAMWriteData;
+
+	-- Memory read data will need to be connected at the top level (SMS.sv)
+	-- These are placeholders for compilation
+	Savestate_RAMReadData_WRAM  <= (others => '0');
+	Savestate_RAMReadData_VRAM1 <= (others => '0');
+	Savestate_RAMReadData_VRAM2 <= (others => '0');
+	Savestate_RAMReadData_CRAM  <= (others => '0');
+	Savestate_RAMReadData_BRAM  <= Savestate_CRAMReadData;
+	Savestate_RAMReadData_CRAM2 <= (others => '0');
 
 end Behavioral;

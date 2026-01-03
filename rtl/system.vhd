@@ -319,6 +319,10 @@ architecture Behavioral of system is
 	signal sleep_rewind          : std_logic;
 	signal sleep_savestates      : std_logic;
 
+	-- Audio mixer output signals
+	signal audio_l_signed        : signed(15 downto 0);
+	signal audio_r_signed        : signed(15 downto 0);
+
 	signal SaveStateBus_Din      : std_logic_vector(63 downto 0);
 	signal SaveStateBus_Adr      : std_logic_vector(9 downto 0);
 	signal SaveStateBus_wren     : std_logic;
@@ -559,9 +563,13 @@ port map(
 	audio_in_l2 => signed(mix2_inL & "000"),
 	audio_in_r1 => signed(mix_inR & "000"),
 	audio_in_r2 => signed(mix2_inR & "000"),
-	std_logic_vector(audio_l) => audioL,
-	std_logic_vector(audio_r) => audioR
+	audio_l => audio_l_signed,
+	audio_r => audio_r_signed
 );
+
+-- Convert signed audio to std_logic_vector for output
+audioL <= std_logic_vector(audio_l_signed);
+audioR <= std_logic_vector(audio_r_signed);
 
 --	audioL <= (PSG_outL(10) & PSG_outL(10) & PSG_outL(10) & PSG_outL & "00") + (FM_out(13) & FM_out & "0") when fm_ena = '1'
 --	     else (PSG_outL(10) & PSG_outL(10) & PSG_outL(10) & PSG_outL & "00");

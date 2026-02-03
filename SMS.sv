@@ -256,7 +256,7 @@ video_freak video_freak
 // 0         1         2         3          4         5         6
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXXX       XXXXX
+// XXXXXXXXXXXXXXXXX XXXXXXXXXXXXXX XXXXXXXXXXXXX     XXXXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -307,7 +307,7 @@ parameter CONF_STR = {
 	"P2O1,Swap Joysticks,No,Yes;",
 	"P2OE,Multitap,Disabled,Port1;",
 	"P2OG,SNAC,Off,On;",
-	"D3P2OH,Pause Btn Combo,No,Yes;",
+	"D3P2oBC,Pause Btn Combo,Off,Down+1+2,Left+Right,Up+Down;",
 	"P2-;",
 	"D2P2OIJ,Gun Control,Disabled,Joy1,Joy2,Mouse;",
 	"D4P2OK,Gun Fire,Joy,Mouse;",
@@ -803,7 +803,7 @@ assign joy[2] = joy_2[7:0];
 assign joy[3] = joy_3[7:0];
 
 wire raw_serial = status[16];
-wire pause_combo = status[17];
+wire [1:0] pause_combo = status[44:43];
 wire swap = status[1];
 
 wire [7:0] joya;
@@ -840,7 +840,10 @@ always @(posedge clk_sys) begin
 		joyser_th <= USER_IN[4];//sensor
 
 		if (tmr) tmr <= tmr - 1'd1;
-		if (!USER_IN[0] & !USER_IN[2] & !USER_IN[6] & pause_combo) begin //D 1 2 combo
+		//D+1+2 or L+R combo or U+D combo pressed
+		if ((!USER_IN[0] & !USER_IN[2] & !USER_IN[6] & pause_combo==2'b01) |
+		    (!USER_IN[5] & !USER_IN[3] & pause_combo==2'b10) |
+			(!USER_IN[1] & !USER_IN[0] & pause_combo==2'b11)) begin 
 			tmr <= 57000;
 		end
 		joyser[6] <= !tmr;
